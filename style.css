@@ -337,35 +337,39 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- AGC.AI Static Logo + Multi-Color Spinning Ring Loader Styles --- */
+/* --- Gemini Style Multi-Color Glow Loader Styles --- */
 .chat-loader-container {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 2px 0;
+    gap: 12px;
+    padding: 4px 6px;
 }
 
-.chat-static-logo {
+.gemini-logo-icon {
     width: 24px;
     height: 24px;
     object-fit: contain;
-    /* लोगो एकदम स्थिर रहेगा, घूमएगा नहीं */
+    animation: geminiPulse 1.5s ease-in-out infinite;
 }
 
-.chat-multicolor-ring {
+.gemini-multicolor-spinner {
     width: 20px;
     height: 20px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: #58a6ff;   /* नीला */
-    border-right-color: #3fb950;  /* हरा */
-    border-bottom-color: #d29922; /* पीला */
     border-radius: 50%;
-    animation: multiColorSpin 0.8s linear infinite;
+    background: conic-gradient(from 0deg, #4285f4, #9b72cb, #d96570, #fbbc05, #34a853, #4285f4);
+    -webkit-mask: radial-gradient(farthest-side, transparent 65%, #fff 66%);
+    mask: radial-gradient(farthest-side, transparent 65%, #fff 66%);
+    animation: geminiSpin 1s linear infinite;
 }
 
-@keyframes multiColorSpin {
+@keyframes geminiSpin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+@keyframes geminiPulse {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 6px rgba(155, 114, 203, 0.6)); }
 }
 
 /* Desktop View Adjustments */
