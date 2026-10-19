@@ -337,23 +337,33 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- AGC.AI Spinning Loader Animation Styles --- */
-.loader-message {
+/* --- AGC.AI Static Logo + Multi-Color Spinning Ring Loader Styles --- */
+.chat-loader-container {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-style: italic;
-    color: #58a6ff;
+    padding: 2px 0;
 }
 
-.spinning-loader-icon {
-    width: 22px;
-    height: 22px;
-    animation: agcSpin 1.2s linear infinite;
+.chat-static-logo {
+    width: 24px;
+    height: 24px;
     object-fit: contain;
+    /* लोगो एकदम स्थिर रहेगा, घूमएगा नहीं */
 }
 
-@keyframes agcSpin {
+.chat-multicolor-ring {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: #58a6ff;   /* नीला */
+    border-right-color: #3fb950;  /* हरा */
+    border-bottom-color: #d29922; /* पीला */
+    border-radius: 50%;
+    animation: multiColorSpin 0.8s linear infinite;
+}
+
+@keyframes multiColorSpin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
