@@ -1,5 +1,5 @@
 /* ==========================================
-   AGC.AI Dashboard Complete Stylesheet
+   AGC.AI Original Dashboard Stylesheet
    ========================================== */
 
 * {
@@ -18,7 +18,7 @@ body.dashboard-body {
     overflow: hidden;
 }
 
-/* Top Header Styles */
+/* Top Header */
 .top-header {
     height: 60px;
     background-color: #161b22;
@@ -49,7 +49,7 @@ body.dashboard-body {
     color: #58a6ff;
 }
 
-/* Dashboard Container & Sidebar */
+/* Dashboard Layout */
 .dashboard-container {
     display: flex;
     flex: 1;
@@ -58,22 +58,20 @@ body.dashboard-body {
 }
 
 .sidebar {
-    width: 280px;
+    width: 260px;
     background-color: #161b22;
     border-right: 1px solid #30363d;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     padding: 20px;
-    transition: transform 0.3s ease;
+    z-index: 10;
 }
 
 .profile-box {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #30363d;
 }
 
 .profile-logo {
@@ -90,11 +88,11 @@ body.dashboard-body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 170px;
+    max-width: 150px;
 }
 
 .profile-info span {
-    font-size: 12px;
+    font-size: 11px;
     color: #8b949e;
 }
 
@@ -127,29 +125,28 @@ body.dashboard-body {
     border-color: #f85149;
 }
 
-/* Main Content & Chat Section */
+/* Main Content & Chat Box */
 .main-content {
     flex: 1;
     display: flex;
     flex-direction: column;
     background-color: #0d1117;
-    position: relative;
     overflow: hidden;
 }
 
 .welcome-area {
-    padding: 25px;
+    padding: 20px 25px;
 }
 
 .welcome-area h1 {
-    font-size: 24px;
+    font-size: 22px;
     color: #ffffff;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
 }
 
 .welcome-area p {
     color: #8b949e;
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .ai-chat-section {
@@ -195,7 +192,7 @@ body.dashboard-body {
 
 .chat-input-container {
     display: flex;
-    padding: 15px;
+    padding: 12px 15px;
     background-color: #161b22;
     border-top: 1px solid #30363d;
     gap: 10px;
@@ -240,14 +237,12 @@ body.dashboard-body {
     padding: 2px 4px;
 }
 
-/* गोल्डन लोगो एकदम स्थिर रहेगा (कोई रोटेशन नहीं) */
 .chat-static-logo {
     width: 28px;
     height: 28px;
     object-fit: contain;
 }
 
-/* सिर्फ साइड वाली नीली रिंग गोल-गोल घूमेगी */
 .chat-spinning-ring {
     width: 20px;
     height: 20px;
