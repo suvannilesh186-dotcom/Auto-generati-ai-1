@@ -178,10 +178,15 @@ if (sendChatBtn && chatInput && chatMessages) {
             }
         }
 
-        // ⚡ केवल घूमता हुआ गोल्डन लोगो लोडर (बिना किसी टेक्स्ट के)
+        // ⚡ चैट के अंदर स्थिर गोल्डन लोगो + साइड में घूमने वाली रिंग वाला लोडर
         const loadingMsg = document.createElement('div');
-        loadingMsg.className = 'message ai-message loader-message';
-        loadingMsg.innerHTML = `<img src="/assets/logo.png" alt="AGC.AI Loader" class="spinning-loader-icon" />`;
+        loadingMsg.className = 'message ai-message';
+        loadingMsg.innerHTML = `
+            <div class="chat-loader-wrapper">
+                <img src="/assets/logo.png" alt="AGC.AI" class="chat-static-logo" />
+                <div class="chat-spinning-ring"></div>
+            </div>
+        `;
         chatMessages.appendChild(loadingMsg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
