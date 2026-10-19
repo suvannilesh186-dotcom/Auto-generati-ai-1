@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGC.AI - Ultimate Dashboard</title>
+    <link rel="stylesheet" href="style.css?v=3">
+</head>
+<body class="dashboard-body">
+
+    <!-- Top Header -->
+    <header class="top-header">
+        <button class="menu-toggle-btn" id="menuToggleBtn">⚡</button>
+        <div class="header-logo">AGC<span>.AI</span> CORE</div>
+    </header>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="profile-box">
+                <img id="channel-logo" src="https://via.placeholder.com/50" alt="Channel Logo" class="profile-logo">
+                <div class="profile-info">
+                    <h4 id="channel-name">Loading Profile...</h4>
+                    <span id="user-email">connecting...</span>
+                </div>
+            </div>
+
+            <div class="sidebar-bottom">
+                <button class="switch-channel-btn" id="switchChannelBtn">🔄 Switch Channel</button>
+                <button class="logout-btn" id="logoutBtn">🚀 Disconnect</button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area with Bottom Chat Box -->
+        <main class="main-content">
+            <div class="welcome-area">
+                <h1>Welcome back, Commander!</h1>
+                <p>AGC.AI Automation System is fully operational and ready.</p>
+            </div>
+
+            <!-- AI Chat Box Section (Pinned to Bottom) -->
+            <div class="ai-chat-section">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message ai-message">⚡ सिस्टम ऑनलाइन है। बताइए आज कौन सा ऑटोमेशन या कंटेंट तैयार करना है?</div>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" id="chatInput" placeholder="यहाँ अपना कमांड या मैसेज टाइप करें..." />
+                    <button id="sendChatBtn">🔥</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Dashboard JavaScript Link -->
+    <script type="module" src="dashboard.js?v=3"></script>
+</body>
+</html>
