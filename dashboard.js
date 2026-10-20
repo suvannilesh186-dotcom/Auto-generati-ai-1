@@ -178,9 +178,13 @@ if (sendChatBtn && chatInput && chatMessages) {
             }
         }
 
-        // ⚡ जेमिनी स्टाइल मल्टीकलर ग्लोइंग लोडर
+        // ⚡ जेमिनी स्टाइल ट्रांसपेरेंट लोडर (बिना किसी काले डिब्बे के)
         const loadingMsg = document.createElement('div');
-        loadingMsg.className = 'message ai-message';
+        loadingMsg.style.background = 'transparent';
+        loadingMsg.style.border = 'none';
+        loadingMsg.style.boxShadow = 'none';
+        loadingMsg.style.padding = '4px 8px';
+        loadingMsg.style.alignSelf = 'flex-start';
         loadingMsg.innerHTML = `
             <div class="chat-loader-container">
                 <img src="/assets/logo.png" alt="AGC.AI" class="gemini-logo-icon" />
