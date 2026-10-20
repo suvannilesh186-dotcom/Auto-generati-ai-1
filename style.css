@@ -337,19 +337,19 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- Gemini Style Multi-Color Glow Loader Styles (Updated & Centered) --- */
+/* --- Gemini Style Multi-Color Glow Loader Styles (Perfected) --- */
 .chat-loader-container {
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
 }
 
 .gemini-logo-icon {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     position: absolute;
     z-index: 2;
     object-fit: contain;
@@ -358,13 +358,13 @@ body.dashboard-body {
 
 .gemini-multicolor-spinner {
     position: absolute;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: conic-gradient(from 0deg, #4285f4, #9b72cb, #d96570, #fbbc05, #34a853, #4285f4);
-    -webkit-mask: radial-gradient(farthest-side, transparent 65%, #fff 66%);
-    mask: radial-gradient(farthest-side, transparent 65%, #fff 66%);
-    animation: geminiSpin 1s linear infinite;
+    -webkit-mask: radial-gradient(farthest-side, transparent 60%, #fff 61%);
+    mask: radial-gradient(farthest-side, transparent 60%, #fff 61%);
+    animation: geminiSpin 1.2s linear infinite;
     z-index: 1;
 }
 
