@@ -337,14 +337,15 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- Gemini Style Multi-Color Glow Loader Styles (Perfected) --- */
+/* --- Perfect Gemini Morphing & Spinning Loader --- */
 .chat-loader-container {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
+    margin: 4px 0;
 }
 
 .gemini-logo-icon {
@@ -353,29 +354,43 @@ body.dashboard-body {
     position: absolute;
     z-index: 2;
     object-fit: contain;
-    animation: geminiPulse 1.5s ease-in-out infinite;
+    animation: logoMorphPulse 1.6s ease-in-out infinite;
 }
 
 .gemini-multicolor-spinner {
     position: absolute;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: conic-gradient(from 0deg, #4285f4, #9b72cb, #d96570, #fbbc05, #34a853, #4285f4);
-    -webkit-mask: radial-gradient(farthest-side, transparent 60%, #fff 61%);
-    mask: radial-gradient(farthest-side, transparent 60%, #fff 61%);
-    animation: geminiSpin 1.2s linear infinite;
+    -webkit-mask: radial-gradient(farthest-side, transparent 55%, #fff 57%);
+    mask: radial-gradient(farthest-side, transparent 55%, #fff 57%);
+    animation: geminiMorphSpin 1.4s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
     z-index: 1;
 }
 
-@keyframes geminiSpin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+@keyframes geminiMorphSpin {
+    0% {
+        transform: rotate(0deg) scale(0.85);
+    }
+    50% {
+        transform: rotate(180deg) scale(1.25);
+    }
+    100% {
+        transform: rotate(360deg) scale(0.85);
+    }
 }
 
-@keyframes geminiPulse {
-    0%, 100% { transform: scale(1); opacity: 0.8; }
-    50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 6px rgba(155, 114, 203, 0.6)); }
+@keyframes logoMorphPulse {
+    0%, 100% {
+        transform: scale(0.9);
+        opacity: 0.85;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 1;
+        filter: drop-shadow(0 0 5px rgba(155, 114, 203, 0.7));
+    }
 }
 
 /* Desktop View Adjustments */
