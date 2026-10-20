@@ -337,14 +337,14 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- Professional Balanced Gemini Loader --- */
+/* --- Segmented Arcs AI Loader (As Requested) --- */
 .chat-loader-container {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     background: transparent;
     border: none;
     box-shadow: none;
@@ -353,46 +353,57 @@ body.dashboard-body {
 }
 
 .gemini-logo-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     position: absolute;
     z-index: 2;
     object-fit: contain;
-    animation: logoMorphPulse 1.6s ease-in-out infinite;
+    animation: logoPulseScale 1.6s ease-in-out infinite;
 }
 
 .gemini-multicolor-spinner {
     position: absolute;
-    width: 24px;
-    height: 24px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    background: conic-gradient(from 0deg, #4285f4 0deg, #9b72cb 90deg, #fbbc05 180deg, transparent 240deg, transparent 360deg);
-    -webkit-mask: radial-gradient(farthest-side, transparent 52%, #fff 55%);
-    mask: radial-gradient(farthest-side, transparent 52%, #fff 55%);
-    animation: geminiMorphSpin 1.4s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+    /* यहाँ हमने टुकड़ों (Segments) वाली आर्च रिंग बनाई है */
+    background: conic-gradient(
+        from 0deg, 
+        #fbbc05 0deg, #fbbc05 50deg, 
+        transparent 50deg, transparent 80deg, 
+        #4285f4 80deg, #4285f4 150deg, 
+        transparent 150deg, transparent 190deg, 
+        #34a853 190deg, #34a853 260deg, 
+        transparent 260deg, transparent 300deg, 
+        #ea4335 300deg, #ea4335 360deg
+    );
+    -webkit-mask: radial-gradient(farthest-side, transparent 56%, #fff 59%);
+    mask: radial-gradient(farthest-side, transparent 56%, #fff 59%);
+    animation: arcSpinAndScale 1.6s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
     z-index: 1;
 }
 
-@keyframes geminiMorphSpin {
+@keyframes arcSpinAndScale {
     0% {
-        transform: rotate(0deg) scale(0.9);
+        transform: rotate(0deg) scale(0.85);
     }
     50% {
-        transform: rotate(180deg) scale(1.15);
+        transform: rotate(180deg) scale(1.2);
     }
     100% {
-        transform: rotate(360deg) scale(0.9);
+        transform: rotate(360deg) scale(0.85);
     }
 }
 
-@keyframes logoMorphPulse {
+@keyframes logoPulseScale {
     0%, 100% {
-        transform: scale(0.95);
-        opacity: 0.9;
+        transform: scale(0.9);
+        opacity: 0.85;
     }
     50% {
         transform: scale(1.1);
         opacity: 1;
+        filter: drop-shadow(0 0 4px rgba(251, 188, 5, 0.6));
     }
 }
 
