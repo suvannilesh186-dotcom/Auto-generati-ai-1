@@ -83,7 +83,6 @@ body.login-body {
     font-weight: bold;
 }
 
-
 /* --- Dashboard Body & Layout Styles --- */
 body.dashboard-body {
     background-color: #07090e;
@@ -337,73 +336,92 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- Segmented Arcs AI Loader (As Requested) --- */
+/* --- AGC.AI Premium Gold Segmented Loader --- */
 .chat-loader-container {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
     background: transparent;
     border: none;
     box-shadow: none;
     padding: 0;
     margin: 2px 0;
+    isolation: isolate;
 }
 
 .gemini-logo-icon {
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
     position: absolute;
     z-index: 2;
     object-fit: contain;
-    animation: logoPulseScale 1.6s ease-in-out infinite;
+    /* Logo remains still; only the outer ring animates. */
+    animation: none;
+    transform: none;
+    filter: drop-shadow(0 0 3px rgba(242, 190, 75, 0.2));
 }
 
 .gemini-multicolor-spinner {
     position: absolute;
-    width: 30px;
-    height: 30px;
+    inset: 1px;
+    width: auto;
+    height: auto;
     border-radius: 50%;
-    /* यहाँ हमने टुकड़ों (Segments) वाली आर्च रिंग बनाई है */
     background: conic-gradient(
-        from 0deg, 
-        #fbbc05 0deg, #fbbc05 50deg, 
-        transparent 50deg, transparent 80deg, 
-        #4285f4 80deg, #4285f4 150deg, 
-        transparent 150deg, transparent 190deg, 
-        #34a853 190deg, #34a853 260deg, 
-        transparent 260deg, transparent 300deg, 
-        #ea4335 300deg, #ea4335 360deg
+        from 0deg,
+        transparent 0deg 14deg,
+        #8c5b14 14deg 20deg,
+        transparent 20deg 28deg,
+        #c28a2c 28deg 52deg,
+        transparent 52deg 60deg,
+        #f6d889 60deg 66deg,
+        transparent 66deg 76deg,
+        #d8a33e 76deg 108deg,
+        transparent 108deg 116deg,
+        #fff0b8 116deg 122deg,
+        transparent 122deg 132deg,
+        #b77b1f 132deg 158deg,
+        transparent 158deg 166deg,
+        #f2c35f 166deg 196deg,
+        transparent 196deg 204deg,
+        #8c5b14 204deg 212deg,
+        transparent 212deg 222deg,
+        #e5b34f 222deg 254deg,
+        transparent 254deg 262deg,
+        #fff0b8 262deg 268deg,
+        transparent 268deg 278deg,
+        #c28a2c 278deg 308deg,
+        transparent 308deg 316deg,
+        #d8a33e 316deg 344deg,
+        transparent 344deg 360deg
     );
-    -webkit-mask: radial-gradient(farthest-side, transparent 56%, #fff 59%);
-    mask: radial-gradient(farthest-side, transparent 56%, #fff 59%);
-    animation: arcSpinAndScale 1.6s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
+    -webkit-mask: radial-gradient(farthest-side, transparent 67%, #000 70%);
+    mask: radial-gradient(farthest-side, transparent 67%, #000 70%);
+    transform-origin: center;
+    animation: goldArcSpinScale 1.8s cubic-bezier(0.55, 0.08, 0.35, 0.96) infinite;
     z-index: 1;
+    will-change: transform;
 }
 
-@keyframes arcSpinAndScale {
+@keyframes goldArcSpinScale {
     0% {
-        transform: rotate(0deg) scale(0.85);
+        transform: rotate(0deg) scale(0.88);
     }
     50% {
-        transform: rotate(180deg) scale(1.2);
+        transform: rotate(180deg) scale(1.08);
     }
     100% {
-        transform: rotate(360deg) scale(0.85);
+        transform: rotate(360deg) scale(0.88);
     }
 }
 
-@keyframes logoPulseScale {
-    0%, 100% {
-        transform: scale(0.9);
-        opacity: 0.85;
-    }
-    50% {
-        transform: scale(1.1);
-        opacity: 1;
-        filter: drop-shadow(0 0 4px rgba(251, 188, 5, 0.6));
+/* Respect reduced-motion accessibility preferences. */
+@media (prefers-reduced-motion: reduce) {
+    .gemini-multicolor-spinner {
+        animation-duration: 6s;
     }
 }
 
