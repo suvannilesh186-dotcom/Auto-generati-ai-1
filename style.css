@@ -337,7 +337,7 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- Clean Gemini Loader (No Box, Perfect Size) --- */
+/* --- Final Gemini Arc Morphing Loader --- */
 .chat-loader-container {
     display: inline-flex;
     align-items: center;
@@ -366,7 +366,7 @@ body.dashboard-body {
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: conic-gradient(from 0deg, #4285f4, #9b72cb, #d96570, #fbbc05, #34a853, #4285f4);
+    background: conic-gradient(from 0deg, #4285f4 0deg, #9b72cb 90deg, #fbbc05 180deg, transparent 240deg, transparent 360deg);
     -webkit-mask: radial-gradient(farthest-side, transparent 52%, #fff 55%);
     mask: radial-gradient(farthest-side, transparent 52%, #fff 55%);
     animation: geminiMorphSpin 1.4s cubic-bezier(0.65, 0.05, 0.36, 1) infinite;
