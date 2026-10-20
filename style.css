@@ -369,7 +369,7 @@ body.dashboard-body {
     inset: 1px;
     width: auto;
     height: auto;
-    border-radius: 50%;
+    border-radius: 25%;
     background: conic-gradient(
         from 0deg,
         transparent 0deg 14deg,
