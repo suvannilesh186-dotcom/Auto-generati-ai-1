@@ -337,7 +337,7 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- Final Gemini Arc Morphing Loader --- */
+/* --- Professional Balanced Gemini Loader --- */
 .chat-loader-container {
     display: inline-flex;
     align-items: center;
@@ -353,8 +353,8 @@ body.dashboard-body {
 }
 
 .gemini-logo-icon {
-    width: 11px;
-    height: 11px;
+    width: 16px;
+    height: 16px;
     position: absolute;
     z-index: 2;
     object-fit: contain;
@@ -375,23 +375,23 @@ body.dashboard-body {
 
 @keyframes geminiMorphSpin {
     0% {
-        transform: rotate(0deg) scale(0.85);
+        transform: rotate(0deg) scale(0.9);
     }
     50% {
-        transform: rotate(180deg) scale(1.25);
+        transform: rotate(180deg) scale(1.15);
     }
     100% {
-        transform: rotate(360deg) scale(0.85);
+        transform: rotate(360deg) scale(0.9);
     }
 }
 
 @keyframes logoMorphPulse {
     0%, 100% {
-        transform: scale(0.9);
-        opacity: 0.85;
+        transform: scale(0.95);
+        opacity: 0.9;
     }
     50% {
-        transform: scale(1.15);
+        transform: scale(1.1);
         opacity: 1;
     }
 }
