@@ -337,97 +337,185 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- Exact Reference Gemini Segmented Loader (Zero Artifacts / No Tilted Box) --- */
+/* --- Custom Loader Container & Thinking Pill Styles --- */
 .chat-loader-container {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    position: relative !important;
-    width: 84px !important;
-    height: 84px !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    transform: none !important;
-    padding: 0 !important;
-    margin: 8px 0 !important;
+    width: 190px;
+    height: 230px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 18px;
+    margin: 15px auto;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
 }
 
+/* Gold rotating segmented ring */
+.gemini-multicolor-spinner {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 170px;
+    height: 170px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+
+    background: conic-gradient(
+        from 0deg,
+        transparent 0deg 20deg,
+        #f7c85b 20deg 75deg,
+        transparent 75deg 100deg,
+        #ffdf83 100deg 155deg,
+        transparent 155deg 180deg,
+        #f0ae35 180deg 235deg,
+        transparent 235deg 260deg,
+        #ffe7a0 260deg 315deg,
+        transparent 315deg 360deg
+    );
+
+    -webkit-mask: radial-gradient(
+        farthest-side,
+        transparent 91%,
+        #000 93%
+    );
+
+    mask: radial-gradient(
+        farthest-side,
+        transparent 91%,
+        #000 93%
+    );
+
+    filter:
+        drop-shadow(0 0 5px rgba(255, 190, 50, 0.9))
+        drop-shadow(0 0 14px rgba(255, 160, 20, 0.45));
+
+    animation: agcGoldRingRotate 3s linear infinite;
+    z-index: 1;
+}
+
+/* Static center logo */
 .gemini-logo-icon {
-    width: 34px !important;
-    height: 34px !important;
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    z-index: 3 !important;
-    object-fit: contain !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    animation: logoPulseCenter 1.6s ease-in-out infinite !important;
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    width: 70px;
+    height: 70px;
+
+    transform: translateX(-50%);
+    object-fit: contain;
+
+    z-index: 3;
+    animation: none;
+
+    filter:
+        drop-shadow(0 0 5px rgba(255, 190, 50, 0.8))
+        drop-shadow(0 0 12px rgba(255, 150, 20, 0.5));
 }
 
-.gemini-svg-spinner {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 84px !important;
-    height: 84px !important;
-    background: transparent !important;
-    border: none !important;
-    transform: none !important;
-    animation: spinSvgContainer 3s linear infinite !important;
-    z-index: 2 !important;
+/* Outer glow behind the ring */
+.chat-loader-container::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    left: 50%;
+
+    width: 145px;
+    height: 145px;
+
+    transform: translateX(-50%);
+    border-radius: 50%;
+
+    border: 2px solid rgba(255, 190, 60, 0.12);
+
+    box-shadow:
+        0 0 18px rgba(255, 170, 30, 0.15),
+        inset 0 0 18px rgba(255, 170, 30, 0.08);
+
+    z-index: 0;
 }
 
-.arc-ring {
-    fill: none !important;
-    stroke-linecap: round !important;
-    transform-origin: center !important;
+/* Thinking pill */
+.chat-loader-container::after {
+    content: "● ● ●   Thinking...";
+
+    position: absolute;
+    top: 185px;
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    width: 190px;
+    padding: 13px 8px;
+
+    border-radius: 40px;
+
+    background: linear-gradient(
+        145deg,
+        #0b1728,
+        #101d30
+    );
+
+    border: 1px solid rgba(255, 200, 90, 0.12);
+
+    color: #e1e7f0;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+
+    box-shadow:
+        0 0 18px rgba(0, 0, 0, 0.4),
+        inset 0 0 12px rgba(50, 80, 120, 0.08);
+
+    animation: agcThinkingGlow 2s ease-in-out infinite;
+    z-index: 4;
 }
 
-.outer-ring {
-    stroke: #ffd700 !important;
-    stroke-width: 2.5 !important;
-    stroke-dasharray: 90 50 80 50 !important;
-    animation: rotateOuterArc 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
-    filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.9)) drop-shadow(0 0 16px rgba(255, 183, 3, 0.6)) !important;
-}
-
-.inner-ring {
-    stroke: #ffea75 !important;
-    stroke-width: 1.8 !important;
-    stroke-dasharray: 60 45 55 45 !important;
-    animation: rotateInnerArc 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite reverse !important;
-    filter: drop-shadow(0 0 6px rgba(255, 234, 117, 0.8)) drop-shadow(0 0 12px rgba(255, 209, 102, 0.5)) !important;
-}
-
-@keyframes rotateOuterArc {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes rotateInnerArc {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes spinSvgContainer {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes logoPulseCenter {
-    0%, 100% {
-        transform: translate(-50%, -50%) scale(0.95);
-        opacity: 0.9;
+/* Ring rotation */
+@keyframes agcGoldRingRotate {
+    0% {
+        transform: translateX(-50%) rotate(0deg);
     }
+
+    100% {
+        transform: translateX(-50%) rotate(360deg);
+    }
+}
+
+/* Thinking pill glow */
+@keyframes agcThinkingGlow {
+    0%, 100% {
+        box-shadow:
+            0 0 12px rgba(255, 180, 40, 0.08),
+            inset 0 0 12px rgba(50, 80, 120, 0.08);
+    }
+
     50% {
-        transform: translate(-50%, -50%) scale(1.08);
-        opacity: 1;
-        filter: drop-shadow(0 0 12px rgba(255, 234, 117, 1));
+        box-shadow:
+            0 0 22px rgba(255, 180, 40, 0.2),
+            inset 0 0 15px rgba(50, 80, 120, 0.12);
+    }
+}
+
+/* Mobile adjustment */
+@media (max-width: 480px) {
+    .chat-loader-container {
+        transform: scale(0.9);
+        transform-origin: top center;
+        margin-bottom: 0;
+    }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .gemini-multicolor-spinner,
+    .chat-loader-container::after {
+        animation-duration: 8s;
     }
 }
 

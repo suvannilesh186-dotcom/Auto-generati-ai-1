@@ -178,20 +178,22 @@ if (sendChatBtn && chatInput && chatMessages) {
             }
         }
 
-        // ⚡ वेक्टर SVG स्मूथ लोडर (बिना किसी डिब्बे के)
+        // ⚡ Exact User-Specified Loader HTML
         const loadingMsg = document.createElement('div');
-        loadingMsg.style.background = 'transparent';
-        loadingMsg.style.border = 'none';
-        loadingMsg.style.boxShadow = 'none';
-        loadingMsg.style.padding = '4px 8px';
-        loadingMsg.style.alignSelf = 'flex-start';
+        loadingMsg.className = '';
+        loadingMsg.style.cssText = 'background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 4px 0 !important; align-self: flex-start !important;';
         loadingMsg.innerHTML = `
-            <div class="chat-loader-container">
-                <img src="/assets/logo.png" alt="AGC.AI" class="gemini-logo-icon" />
-                <svg class="gemini-svg-spinner" viewBox="0 0 100 100">
-                    <circle class="arc-ring outer-ring" cx="50" cy="50" r="42" />
-                    <circle class="arc-ring inner-ring" cx="50" cy="50" r="30" />
-                </svg>
+            <div class="chat-loader-container"
+                 role="status"
+                 aria-label="AGC.AI is thinking">
+
+                <img
+                    src="/assets/logo.png"
+                    alt="AGC.AI"
+                    class="gemini-logo-icon"
+                />
+
+                <div class="gemini-multicolor-spinner"></div>
             </div>
         `;
         chatMessages.appendChild(loadingMsg);
