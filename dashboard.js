@@ -178,7 +178,7 @@ if (sendChatBtn && chatInput && chatMessages) {
             }
         }
 
-        // ⚡ जेमिनी स्टाइल ट्रांसपेरेंट लोडर (बिना किसी काले डिब्बे के)
+        // ⚡ वेक्टर SVG स्मूथ लोडर (बिना किसी डिब्बे के)
         const loadingMsg = document.createElement('div');
         loadingMsg.style.background = 'transparent';
         loadingMsg.style.border = 'none';
@@ -188,7 +188,10 @@ if (sendChatBtn && chatInput && chatMessages) {
         loadingMsg.innerHTML = `
             <div class="chat-loader-container">
                 <img src="/assets/logo.png" alt="AGC.AI" class="gemini-logo-icon" />
-                <div class="gemini-multicolor-spinner"></div>
+                <svg class="gemini-svg-spinner" viewBox="0 0 100 100">
+                    <circle class="arc-ring outer-ring" cx="50" cy="50" r="42" />
+                    <circle class="arc-ring inner-ring" cx="50" cy="50" r="30" />
+                </svg>
             </div>
         `;
         chatMessages.appendChild(loadingMsg);
