@@ -337,185 +337,111 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- Custom Loader Container & Thinking Pill Styles --- */
-.chat-loader-container {
-    width: 190px;
-    height: 230px;
+/* --- Ultimate Dual-Ring AI Core Loader --- */
+.ai-core {
     position: relative;
+    width: 200px;
+    height: 200px;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    gap: 18px;
-    margin: 15px auto;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    padding: 0;
+    justify-content: center;
+    margin: 10px auto;
+    isolation: isolate;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
-/* Gold rotating segmented ring */
-.gemini-multicolor-spinner {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 170px;
-    height: 170px;
-    transform: translateX(-50%);
-    border-radius: 50%;
-
-    background: conic-gradient(
-        from 0deg,
-        transparent 0deg 20deg,
-        #f7c85b 20deg 75deg,
-        transparent 75deg 100deg,
-        #ffdf83 100deg 155deg,
-        transparent 155deg 180deg,
-        #f0ae35 180deg 235deg,
-        transparent 235deg 260deg,
-        #ffe7a0 260deg 315deg,
-        transparent 315deg 360deg
-    );
-
-    -webkit-mask: radial-gradient(
-        farthest-side,
-        transparent 91%,
-        #000 93%
-    );
-
-    mask: radial-gradient(
-        farthest-side,
-        transparent 91%,
-        #000 93%
-    );
-
-    filter:
-        drop-shadow(0 0 5px rgba(255, 190, 50, 0.9))
-        drop-shadow(0 0 14px rgba(255, 160, 20, 0.45));
-
-    animation: agcGoldRingRotate 3s linear infinite;
-    z-index: 1;
-}
-
-/* Static center logo */
-.gemini-logo-icon {
-    position: absolute;
-    top: 50px;
-    left: 50%;
-    width: 70px;
-    height: 70px;
-
-    transform: translateX(-50%);
-    object-fit: contain;
-
+/* Original Logo - Stays Still with Glow */
+.ai-core .ai-logo {
+    position: relative;
     z-index: 3;
-    animation: none;
-
-    filter:
-        drop-shadow(0 0 5px rgba(255, 190, 50, 0.8))
-        drop-shadow(0 0 12px rgba(255, 150, 20, 0.5));
+    width: 75px;
+    height: 75px;
+    object-fit: contain;
+    animation: logoGlow 2s ease-in-out infinite alternate;
 }
 
-/* Outer glow behind the ring */
-.chat-loader-container::before {
-    content: "";
+/* Common Ring Style */
+.ai-core .ring {
     position: absolute;
-    top: 10px;
-    left: 50%;
-
-    width: 145px;
-    height: 145px;
-
-    transform: translateX(-50%);
     border-radius: 50%;
+    pointer-events: none;
+    box-sizing: border-box;
+    will-change: transform;
+}
 
-    border: 2px solid rgba(255, 190, 60, 0.12);
-
+/* Outer Golden Ring */
+.ai-core .ring-outer {
+    width: 100%;
+    height: 100%;
+    border: 2px solid transparent;
+    border-top-color: #ffd76a;
+    border-right-color: rgba(255, 183, 45, 0.75);
+    border-bottom-color: rgba(255, 215, 106, 0.2);
+    border-left-color: #ffca45;
     box-shadow:
-        0 0 18px rgba(255, 170, 30, 0.15),
-        inset 0 0 18px rgba(255, 170, 30, 0.08);
-
-    z-index: 0;
+        0 0 12px rgba(255, 190, 55, 0.35),
+        inset 0 0 10px rgba(255, 190, 55, 0.12);
+    animation: outerRotate 8s linear infinite,
+               outerPulse 3s ease-in-out infinite;
 }
 
-/* Thinking pill */
-.chat-loader-container::after {
-    content: "● ● ●   Thinking...";
-
-    position: absolute;
-    top: 185px;
-    left: 50%;
-
-    transform: translateX(-50%);
-
-    width: 190px;
-    padding: 13px 8px;
-
-    border-radius: 40px;
-
-    background: linear-gradient(
-        145deg,
-        #0b1728,
-        #101d30
-    );
-
-    border: 1px solid rgba(255, 200, 90, 0.12);
-
-    color: #e1e7f0;
-    font-size: 14px;
-    font-weight: 500;
-    text-align: center;
-    white-space: nowrap;
-    letter-spacing: 0.3px;
-
+/* Inner Golden Ring */
+.ai-core .ring-inner {
+    width: 78%;
+    height: 78%;
+    border: 2px solid transparent;
+    border-top-color: #fff0a6;
+    border-right-color: rgba(255, 196, 65, 0.25);
+    border-bottom-color: #ffbd38;
+    border-left-color: rgba(255, 220, 125, 0.75);
     box-shadow:
-        0 0 18px rgba(0, 0, 0, 0.4),
-        inset 0 0 12px rgba(50, 80, 120, 0.08);
-
-    animation: agcThinkingGlow 2s ease-in-out infinite;
-    z-index: 4;
+        0 0 10px rgba(255, 194, 55, 0.3),
+        inset 0 0 8px rgba(255, 194, 55, 0.12);
+    animation: innerRotate 5s linear infinite,
+               innerPulse 2.5s ease-in-out infinite;
 }
 
-/* Ring rotation */
-@keyframes agcGoldRingRotate {
-    0% {
-        transform: translateX(-50%) rotate(0deg);
-    }
-
-    100% {
-        transform: translateX(-50%) rotate(360deg);
-    }
+/* Outer Ring Rotation */
+@keyframes outerRotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
-/* Thinking pill glow */
-@keyframes agcThinkingGlow {
-    0%, 100% {
-        box-shadow:
-            0 0 12px rgba(255, 180, 40, 0.08),
-            inset 0 0 12px rgba(50, 80, 120, 0.08);
-    }
+/* Inner Ring Rotates Opposite Direction */
+@keyframes innerRotate {
+    from { transform: rotate(360deg); }
+    to   { transform: rotate(0deg); }
+}
 
-    50% {
-        box-shadow:
-            0 0 22px rgba(255, 180, 40, 0.2),
-            inset 0 0 15px rgba(50, 80, 120, 0.12);
+/* Outer Ring Grows and Shrinks */
+@keyframes outerPulse {
+    0%, 100% { scale: 0.96; }
+    50%      { scale: 1.04; }
+}
+
+/* Inner Ring Grows and Shrinks */
+@keyframes innerPulse {
+    0%, 100% { scale: 0.96; }
+    50%      { scale: 1.04; }
+}
+
+/* Logo Golden Glow */
+@keyframes logoGlow {
+    from {
+        filter: drop-shadow(0 0 4px rgba(255, 190, 45, 0.45));
+    }
+    to {
+        filter: drop-shadow(0 0 12px rgba(255, 190, 45, 0.9));
     }
 }
 
 /* Mobile adjustment */
 @media (max-width: 480px) {
-    .chat-loader-container {
-        transform: scale(0.9);
-        transform-origin: top center;
-        margin-bottom: 0;
-    }
-}
-
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-    .gemini-multicolor-spinner,
-    .chat-loader-container::after {
-        animation-duration: 8s;
+    .ai-core {
+        width: 170px;
+        height: 170px;
     }
 }
 

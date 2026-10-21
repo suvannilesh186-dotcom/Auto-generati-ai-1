@@ -178,22 +178,19 @@ if (sendChatBtn && chatInput && chatMessages) {
             }
         }
 
-        // ⚡ Exact User-Specified Loader HTML
+        // ⚡ Ultimate Dual-Ring AI Core Loader (Updated)
         const loadingMsg = document.createElement('div');
         loadingMsg.className = '';
         loadingMsg.style.cssText = 'background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 4px 0 !important; align-self: flex-start !important;';
         loadingMsg.innerHTML = `
-            <div class="chat-loader-container"
-                 role="status"
-                 aria-label="AGC.AI is thinking">
-
+            <div class="ai-core" role="status" aria-label="AGC.AI is thinking">
+                <div class="ring ring-outer"></div>
+                <div class="ring ring-inner"></div>
                 <img
                     src="/assets/logo.png"
-                    alt="AGC.AI"
-                    class="gemini-logo-icon"
-                />
-
-                <div class="gemini-multicolor-spinner"></div>
+                    class="ai-logo"
+                    alt="AGC AI Core Logo"
+                >
             </div>
         `;
         chatMessages.appendChild(loadingMsg);
