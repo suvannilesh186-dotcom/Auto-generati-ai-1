@@ -337,112 +337,194 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-/* --- Ultimate Dual-Ring AI Core Loader --- */
-.ai-core {
+
+/* --- Ultimate Dual-Ring AI Core Loader (Inline Chat Version) --- */
+.ai-loader.chat-inline-loader {
+    --loader-diameter: min(130px, 35vw);
     position: relative;
-    width: 200px;
-    height: 200px;
+    width: 100%;
+    max-width: 250px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 14px;
+    background: rgba(7, 19, 34, 0.85);
+    border: 1px solid rgba(35, 51, 70, 0.6);
+    border-radius: 14px;
+    backdrop-filter: blur(8px);
+    margin: 8px 0;
+    align-self: flex-start;
+}
+
+.chat-inline-loader .ai-loader__ambient-glow {
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    background: radial-gradient(circle, rgba(255, 179, 0, 0.28) 0%, rgba(255, 130, 0, 0.1) 40%, rgba(255, 179, 0, 0) 70%);
+    border-radius: 50%;
+    filter: blur(25px);
+    z-index: 1;
+    pointer-events: none;
+    animation: ambientGlowPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes ambientGlowPulse {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    100% { transform: scale(1.06); opacity: 1; }
+}
+
+.chat-inline-loader .ai-loader__main-composition {
+    position: relative;
+    width: var(--loader-diameter);
+    height: var(--loader-diameter);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 10px auto;
-    isolation: isolate;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+    z-index: 2;
 }
 
-/* Original Logo - Stays Still with Glow */
-.ai-core .ai-logo {
-    position: relative;
-    z-index: 3;
-    width: 75px;
-    height: 75px;
-    object-fit: contain;
-    animation: logoGlow 2s ease-in-out infinite alternate;
-}
-
-/* Common Ring Style */
-.ai-core .ring {
+.chat-inline-loader .ai-loader__orbits-container {
     position: absolute;
-    border-radius: 50%;
+    width: 75%;
+    height: 75%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
     pointer-events: none;
-    box-sizing: border-box;
-    will-change: transform;
 }
 
-/* Outer Golden Ring */
-.ai-core .ring-outer {
+.chat-inline-loader .ai-loader__svg-ring {
+    position: absolute;
     width: 100%;
     height: 100%;
-    border: 2px solid transparent;
-    border-top-color: #ffd76a;
-    border-right-color: rgba(255, 183, 45, 0.75);
-    border-bottom-color: rgba(255, 215, 106, 0.2);
-    border-left-color: #ffca45;
-    box-shadow:
-        0 0 12px rgba(255, 190, 55, 0.35),
-        inset 0 0 10px rgba(255, 190, 55, 0.12);
-    animation: outerRotate 8s linear infinite,
-               outerPulse 3s ease-in-out infinite;
+    overflow: visible;
 }
 
-/* Inner Golden Ring */
-.ai-core .ring-inner {
-    width: 78%;
-    height: 78%;
-    border: 2px solid transparent;
-    border-top-color: #fff0a6;
-    border-right-color: rgba(255, 196, 65, 0.25);
-    border-bottom-color: #ffbd38;
-    border-left-color: rgba(255, 220, 125, 0.75);
-    box-shadow:
-        0 0 10px rgba(255, 194, 55, 0.3),
-        inset 0 0 8px rgba(255, 194, 55, 0.12);
-    animation: innerRotate 5s linear infinite,
-               innerPulse 2.5s ease-in-out infinite;
+.chat-inline-loader .track-ring {
+    fill: none;
+    stroke: rgba(255, 180, 50, 0.12);
+    stroke-width: 1.5px;
 }
 
-/* Outer Ring Rotation */
-@keyframes outerRotate {
+.chat-inline-loader .outer-ring-svg {
+    animation: rotateClockwise 7s cubic-bezier(0.38, 0, 0.8, 1) infinite;
+}
+
+.chat-inline-loader .outer-arc {
+    fill: none;
+    stroke: #FFB300;
+    stroke-width: 4px;
+    stroke-dasharray: 88 46;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 8px rgba(255, 179, 0, 0.85)) drop-shadow(0 0 16px rgba(255, 120, 0, 0.4));
+}
+
+.chat-inline-loader .inner-ring-svg {
+    animation: rotateCounterClockwise 5s cubic-bezier(0.38, 0, 0.8, 1) infinite;
+}
+
+.chat-inline-loader .inner-arc {
+    fill: none;
+    stroke: #FFCA45;
+    stroke-width: 3px;
+    stroke-dasharray: 68 42;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 6px rgba(255, 202, 69, 0.8));
+}
+
+@keyframes rotateClockwise {
     from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* Inner Ring Rotates Opposite Direction */
-@keyframes innerRotate {
+@keyframes rotateCounterClockwise {
     from { transform: rotate(360deg); }
-    to   { transform: rotate(0deg); }
+    to { transform: rotate(0deg); }
 }
 
-/* Outer Ring Grows and Shrinks */
-@keyframes outerPulse {
-    0%, 100% { scale: 0.96; }
-    50%      { scale: 1.04; }
+.chat-inline-loader .ai-loader__inner-disc {
+    position: absolute;
+    width: 45%;
+    height: 45%;
+    background: radial-gradient(circle, #020304 55%, #080706 100%);
+    border-radius: 100%;
+    box-shadow: inset 0 0 18px rgba(255, 179, 0, 0.08), 0 0 12px rgba(255, 179, 0, 0.12);
+    z-index: 2;
 }
 
-/* Inner Ring Grows and Shrinks */
-@keyframes innerPulse {
-    0%, 100% { scale: 0.96; }
-    50%      { scale: 1.04; }
+.chat-inline-loader .ai-loader__logo {
+    position: relative;
+    width: 48%;
+    height: 48%;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* Logo Golden Glow */
-@keyframes logoGlow {
-    from {
-        filter: drop-shadow(0 0 4px rgba(255, 190, 45, 0.45));
+.chat-inline-loader .ai-logo-center {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 10px rgba(255, 180, 40, 0.4));
+}
+
+.chat-inline-loader .ai-loader__status-pill {
+    position: relative;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: auto;
+    padding: 6px 10px;
+    background: rgba(3, 11, 20, 0.6);
+    border: 1px solid rgba(255, 179, 0, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.chat-inline-loader .ai-loader__dots {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.chat-inline-loader .ai-loader__dot {
+    width: 6px;
+    height: 6px;
+    background: linear-gradient(135deg, #FFF3B0 0%, #FFB300 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(255, 179, 0, 0.8);
+    animation: dotPulse 1.4s ease-in-out infinite alternate;
+}
+
+.chat-inline-loader .ai-loader__dot--1 { animation-delay: 0s; }
+.chat-inline-loader .ai-loader__dot--2 { animation-delay: 0.25s; }
+.chat-inline-loader .ai-loader__dot--3 { animation-delay: 0.5s; }
+
+@keyframes dotPulse {
+    0% {
+        transform: scale(0.75);
+        opacity: 0.4;
+        box-shadow: 0 0 3px rgba(255, 179, 0, 0.3);
     }
-    to {
-        filter: drop-shadow(0 0 12px rgba(255, 190, 45, 0.9));
+    100% {
+        transform: scale(1.15);
+        opacity: 1;
+        box-shadow: 0 0 12px rgba(255, 243, 176, 0.95);
     }
 }
 
-/* Mobile adjustment */
-@media (max-width: 480px) {
-    .ai-core {
-        width: 170px;
-        height: 170px;
-    }
+.chat-inline-loader .ai-loader__text {
+    font-size: 13px;
+    font-weight: 500;
+    color: #E4E8F0;
+    letter-spacing: 0.3px;
 }
 
 /* Desktop View Adjustments */

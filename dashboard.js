@@ -7,6 +7,15 @@ import { getAuth, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPop
 import { CONFIG } from './config.js';
 
 let auth;
+let loaderInterval = null; // लोडर टेक्स्ट रोटेशन टाइमर
+
+const loaderMessages = [
+    "Thinking...",
+    "Reading data...",
+    "Processing...",
+    "Analyzing...",
+    "Almost ready..."
+];
 
 // YouTube Channel Data Fetching Function
 async function fetchYouTubeChannelData(accessToken) {
@@ -143,6 +152,32 @@ if (loginBtn) {
     loginBtn.addEventListener('click', handleYouTubePopupLogin);
 }
 
+// लोडर टेक्स्ट रोटेशन फंक्शन
+function startLoaderTextRotation() {
+    if (loaderInterval) clearInterval(loaderInterval);
+    
+    let msgIndex = 0;
+    
+    loaderInterval = setInterval(() => {
+        const textElement = document.getElementById('loader-text');
+        if (!textElement) return;
+
+        msgIndex = (msgIndex + 1) % loaderMessages.length;
+        
+        // हल्का फेड-आउट इफ़ेक्ट
+        textElement.style.opacity = 0;
+        
+        setTimeout(() => {
+            const el = document.getElementById('loader-text');
+            if (el) {
+                el.textContent = loaderMessages[msgIndex];
+                el.style.opacity = 1;
+            }
+        }, 250);
+
+    }, 2500); // हर 2.5 सेकंड में टेक्स्ट बदलेगा
+}
+
 // AI Chat Box Logic (Connected with OpenAI API via LocalStorage)
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
@@ -178,23 +213,41 @@ if (sendChatBtn && chatInput && chatMessages) {
             }
         }
 
-        // ⚡ Ultimate Dual-Ring AI Core Loader (Updated)
+        // ⚡ Ultimate Dual-Ring AI Core Loader with Dynamic Text Rotation
         const loadingMsg = document.createElement('div');
-        loadingMsg.className = '';
-        loadingMsg.style.cssText = 'background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 4px 0 !important; align-self: flex-start !important;';
+        loadingMsg.className = 'ai-loader chat-inline-loader';
         loadingMsg.innerHTML = `
-            <div class="ai-core" role="status" aria-label="AGC.AI is thinking">
-                <div class="ring ring-outer"></div>
-                <div class="ring ring-inner"></div>
-                <img
-                    src="/assets/logo.png"
-                    class="ai-logo"
-                    alt="AGC AI Core Logo"
-                >
+            <div class="ai-loader__ambient-glow"></div>
+            <div class="ai-loader__main-composition">
+                <div class="ai-loader__orbits-container">
+                    <svg class="ai-loader__svg-ring outer-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
+                        <circle class="track-ring" cx="100" cy="100" r="86" />
+                        <circle class="segmented-arc outer-arc" cx="100" cy="100" r="86" />
+                    </svg>
+                    <svg class="ai-loader__svg-ring inner-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
+                        <circle class="track-ring" cx="100" cy="100" r="70" />
+                        <circle class="segmented-arc inner-arc" cx="100" cy="100" r="70" />
+                    </svg>
+                </div>
+                <div class="ai-loader__inner-disc"></div>
+                <div class="ai-loader__logo">
+                    <img src="assets/logo.png" class="ai-logo-center" alt="AGC AI Core Logo">
+                </div>
+            </div>
+            <div class="ai-loader__status-pill">
+                <div class="ai-loader__dots" aria-hidden="true">
+                    <span class="ai-loader__dot ai-loader__dot--1"></span>
+                    <span class="ai-loader__dot ai-loader__dot--2"></span>
+                    <span class="ai-loader__dot ai-loader__dot--3"></span>
+                </div>
+                <span class="ai-loader__text" id="loader-text">Thinking...</span>
             </div>
         `;
         chatMessages.appendChild(loadingMsg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // टेक्स्ट रोटेशन लूप शुरू करें
+        startLoaderTextRotation();
 
         try {
             const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -214,7 +267,12 @@ if (sendChatBtn && chatInput && chatMessages) {
             });
 
             const data = await response.json();
-            chatMessages.removeChild(loadingMsg);
+            
+            // लोडर टाइमर बंद करें और लोडर हटाएँ
+            if (loaderInterval) clearInterval(loaderInterval);
+            if (chatMessages.contains(loadingMsg)) {
+                chatMessages.removeChild(loadingMsg);
+            }
 
             if (data.choices && data.choices.length > 0) {
                 const aiReply = data.choices[0].message.content;
@@ -229,9 +287,12 @@ if (sendChatBtn && chatInput && chatMessages) {
             }
         } catch (error) {
             console.error("AI Error:", error);
+            
+            if (loaderInterval) clearInterval(loaderInterval);
             if (chatMessages.contains(loadingMsg)) {
                 chatMessages.removeChild(loadingMsg);
             }
+            
             const errorMsg = document.createElement('div');
             errorMsg.className = 'message ai-message';
             errorMsg.innerText = `❌ एरर: ${error.message}`;
