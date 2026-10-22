@@ -17,6 +17,17 @@ const loaderMessages = [
     "Almost ready..."
 ];
 
+// Helper to append chat message easily
+function appendMessage(text, sender) {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
+    msgDiv.innerText = text;
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
 // YouTube Channel Data Fetching Function
 async function fetchYouTubeChannelData(accessToken) {
     try {
@@ -83,6 +94,13 @@ try {
             if (emailElem) emailElem.innerText = user.email || "Connected User";
             if (nameElem && user.displayName) nameElem.innerText = user.displayName;
             if (logoElem && user.photoURL) logoElem.src = user.photoURL;
+
+            // Welcome Message with User Name
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages && chatMessages.children.length === 0) {
+                const userName = user.displayName ? user.displayName.split(' ')[0] : 'Commander';
+                appendMessage(`Hi ${userName}! बताइए आज कौन सा ऑटोमेशन या कंटेंट तैयार करना है?`, 'ai');
+            }
 
             const token = localStorage.getItem('agc_access_token');
             if (token) {
@@ -189,13 +207,8 @@ if (sendChatBtn && chatInput && chatMessages) {
         if (!text) return;
 
         // यूजर का मैसेज स्क्रीन पर जोड़ें
-        const userMsg = document.createElement('div');
-        userMsg.className = 'message user-message';
-        userMsg.innerText = text;
-        chatMessages.appendChild(userMsg);
-
+        appendMessage(text, 'user');
         chatInput.value = '';
-        chatMessages.scrollTop = chatMessages.scrollHeight;
 
         // लोकल स्टोरेज से ओपनएआई की चेक करें
         let openAiKey = localStorage.getItem('openai_api_key');
@@ -205,15 +218,12 @@ if (sendChatBtn && chatInput && chatMessages) {
             if (openAiKey) {
                 localStorage.setItem('openai_api_key', openAiKey.trim());
             } else {
-                const cancelMsg = document.createElement('div');
-                cancelMsg.className = 'message ai-message';
-                cancelMsg.innerText = "⚠️ AI API Key न मिलने के कारण चैट प्रोसेस नहीं हो सकी।";
-                chatMessages.appendChild(cancelMsg);
+                appendMessage("⚠️ AI API Key न मिलने के कारण चैट प्रोसेस नहीं हो सकी।", 'ai');
                 return;
             }
         }
 
-        // ⚡ Ultimate Dual-Ring AI Core Loader with Dynamic Text Rotation
+        // ⚡ Compact Gemini-Style Inline AI Loader
         const loadingMsg = document.createElement('div');
         loadingMsg.className = 'ai-loader chat-inline-loader';
         loadingMsg.innerHTML = `
@@ -276,10 +286,7 @@ if (sendChatBtn && chatInput && chatMessages) {
 
             if (data.choices && data.choices.length > 0) {
                 const aiReply = data.choices[0].message.content;
-                const aiMsg = document.createElement('div');
-                aiMsg.className = 'message ai-message';
-                aiMsg.innerText = aiReply;
-                chatMessages.appendChild(aiMsg);
+                appendMessage(aiReply, 'ai');
             } else if (data.error) {
                 throw new Error(data.error.message || "OpenAI API Error");
             } else {
@@ -293,10 +300,7 @@ if (sendChatBtn && chatInput && chatMessages) {
                 chatMessages.removeChild(loadingMsg);
             }
             
-            const errorMsg = document.createElement('div');
-            errorMsg.className = 'message ai-message';
-            errorMsg.innerText = `❌ एरर: ${error.message}`;
-            chatMessages.appendChild(errorMsg);
+            appendMessage(`❌ एरर: ${error.message}`, 'ai');
         }
 
         chatMessages.scrollTop = chatMessages.scrollHeight;
