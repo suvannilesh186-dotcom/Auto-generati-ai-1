@@ -64,6 +64,8 @@ async function fetchYouTubeChannelData(accessToken) {
                 }
                 subSpan.innerText = `Subscribers: ${subscriberCount}`;
             }
+        } else {
+            console.warn("YouTube API returned no channel items. Token might lack youtube.readonly scope.");
         }
     } catch (error) {
         console.error("YouTube API Error:", error);
@@ -105,6 +107,8 @@ try {
             const token = localStorage.getItem('agc_access_token');
             if (token) {
                 fetchYouTubeChannelData(token);
+            } else {
+                console.warn("agc_access_token is missing in localStorage. YouTube features may fail.");
             }
         } else {
             if (!window.location.href.includes('index.html')) {
@@ -148,7 +152,7 @@ if (menuToggleBtn && sidebar) {
     });
 }
 
-// डायरेक्ट पॉपअप लॉगिन फंक्शन
+// डायरेक्ट पॉपअप लॉगिन फंक्शन (YouTube Scope के साथ)
 const handleYouTubePopupLogin = async () => {
     try {
         const provider = new GoogleAuthProvider();
@@ -162,6 +166,8 @@ const handleYouTubePopupLogin = async () => {
             localStorage.setItem('agc_access_token', credential.accessToken);
             fetchYouTubeChannelData(credential.accessToken);
             window.location.reload();
+        } else {
+            console.error("OAuth Access Token missing.");
         }
     } catch (error) {
         console.error("Popup Login Error:", error);
@@ -190,7 +196,6 @@ function startLoaderTextRotation() {
 
         msgIndex = (msgIndex + 1) % loaderMessages.length;
         
-        // हल्का फेड-आउट इफ़ेक्ट
         textElement.style.opacity = 0;
         
         setTimeout(() => {
@@ -201,10 +206,10 @@ function startLoaderTextRotation() {
             }
         }, 250);
 
-    }, 2500); // हर 2.5 सेकंड में टेक्स्ट बदलेगा
+    }, 2500);
 }
 
-// AI Chat Box Logic (Connected with OpenAI API via LocalStorage)
+// AI Chat Box Logic
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendChatBtn = document.getElementById('sendChatBtn');
@@ -214,11 +219,9 @@ if (sendChatBtn && chatInput && chatMessages) {
         const text = chatInput.value.trim();
         if (!text) return;
 
-        // यूजर का मैसेज स्क्रीन पर जोड़ें
         appendMessage(text, 'user');
         chatInput.value = '';
 
-        // लोकल स्टोरेज से ओपनएआई की चेक करें
         let openAiKey = localStorage.getItem('openai_api_key');
         
         if (!openAiKey) {
@@ -231,7 +234,6 @@ if (sendChatBtn && chatInput && chatMessages) {
             }
         }
 
-        // ⚡ Compact Gemini-Style Inline AI Loader
         const loadingMsg = document.createElement('div');
         loadingMsg.className = 'ai-loader chat-inline-loader';
         loadingMsg.innerHTML = `
@@ -264,7 +266,6 @@ if (sendChatBtn && chatInput && chatMessages) {
         chatMessages.appendChild(loadingMsg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
-        // टेक्स्ट रोटेशन लूप शुरू करें
         startLoaderTextRotation();
 
         try {
@@ -286,7 +287,6 @@ if (sendChatBtn && chatInput && chatMessages) {
 
             const data = await response.json();
             
-            // लोडर टाइमर बंद करें और लोडर हटाएँ
             if (loaderInterval) clearInterval(loaderInterval);
             if (chatMessages.contains(loadingMsg)) {
                 chatMessages.removeChild(loadingMsg);
