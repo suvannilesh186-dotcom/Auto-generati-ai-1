@@ -166,6 +166,12 @@ body.dashboard-body {
     transform: translateX(0);
 }
 
+.sidebar-top-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 .profile-box {
     display: flex;
     align-items: center;
@@ -203,13 +209,12 @@ body.dashboard-body {
 .analytics-btn-box {
     cursor: pointer;
     background: #161b22;
-    padding: 12px 15px;
-    border-radius: 12px;
+    padding: 10px;
+    border-radius: 10px;
     border: 1px solid #30363d;
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-top: 10px;
+    gap: 10px;
     transition: border-color 0.2s;
 }
 
@@ -218,7 +223,7 @@ body.dashboard-body {
 }
 
 .analytics-icon {
-    font-size: 22px;
+    font-size: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -230,14 +235,14 @@ body.dashboard-body {
 }
 
 .analytics-info h4 {
-    font-size: 14px;
+    font-size: 13px;
     color: #ffffff;
     margin: 0;
     font-weight: 600;
 }
 
 .analytics-info span {
-    font-size: 11px;
+    font-size: 10px;
     color: #8b949e;
     margin-top: 2px;
 }
