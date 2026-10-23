@@ -130,13 +130,21 @@ try {
     console.error("Firebase Setup Error:", err);
 }
 
-// साइडबार टॉगल लॉजिक (हैमर बटन ⚡)
+// साइडबार टॉगल लॉजिक (हैमर बटन ⚡) और बाहर क्लिक करने पर बंद होने का लॉजिक
 const menuToggleBtn = document.getElementById('menuToggleBtn');
 const sidebar = document.getElementById('sidebar');
 
 if (menuToggleBtn && sidebar) {
-    menuToggleBtn.addEventListener('click', () => {
+    menuToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         sidebar.classList.toggle('active');
+    });
+
+    // बाहर कहीं भी क्लिक या टच करने पर साइडबार बंद करने का लॉजिक
+    document.addEventListener('click', (e) => {
+        if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && !menuToggleBtn.contains(e.target)) {
+            sidebar.classList.remove('active');
+        }
     });
 }
 
