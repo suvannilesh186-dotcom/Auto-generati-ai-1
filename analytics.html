@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AGC.AI - Last Video Analytics</title>
-    <link rel="stylesheet" href="style.css?v=3">
+    <title>AGC.AI - Advanced Video Analytics</title>
+    <link rel="stylesheet" href="analytics.css">
+
 </head>
 <body class="dashboard-body">
 
@@ -14,26 +15,99 @@
         <div class="header-logo">AGC<span>.AI</span> ANALYTICS</div>
     </header>
 
-    <main class="main-content analytics-main">
-        <div class="welcome-area">
-            <h1>लास्ट वीडियो एनालिटिक्स</h1>
-            <p>आपके आखिरी अपलोड किए गए YouTube वीडियो का विस्तृत डेटा और परफॉर्मेंस।</p>
+    <main class="main-content analytics-main-container">
+        
+        <!-- Video Title Banner -->
+        <div class="analytics-card">
+            <span class="analytics-badge">लेटेस्ट अपलोडेड वीडियो</span>
+            <h2 id="vid-main-title" class="analytics-video-title">शीर्षक लोड हो रहा है...</h2>
         </div>
 
-        <div class="ai-chat-section analytics-section">
+        <!-- 1. Header Summary Cards -->
+        <div class="analytics-summary-grid">
             <div class="analytics-card">
-                <h3 id="vid-title">वीडियो शीर्षक लोड हो रहा है...</h3>
-                <p id="vid-stats">व्यूज, लाइक्स और एंगेजमेंट डेटा फेच किया जा रहा है...</p>
+                <span class="card-label">कुल व्यूज (Views)</span>
+                <h3 id="stat-views" class="card-value">--</h3>
+                <span class="card-trend positive">📈 पिछले से +14%</span>
             </div>
-
             <div class="analytics-card">
-                <h4>AI सुझाव (Performance Insights)</h4>
-                <p id="vid-insights">लाइव डेटा सिंक्रनाइज होने के बाद AI यहाँ परफॉर्मेंस का विश्लेषण दिखाएगा।</p>
+                <span class="card-label">वॉच टाइम (Watch Time)</span>
+                <h3 id="stat-watchtime" class="card-value">-- घंटे</h3>
+                <span class="card-trend positive">🔥 बेहतरीन इंगेजमेंट</span>
+            </div>
+            <div class="analytics-card">
+                <span class="card-label">औसत ड्यूरेशन (A.V.D.)</span>
+                <h3 id="stat-duration" class="card-value">2:15 मि</h3>
+                <span class="card-trend neutral">⚡ स्थिर रिटेंशन</span>
+            </div>
+            <div class="analytics-card">
+                <span class="card-label">क्लिक-थ्रू रेट (CTR)</span>
+                <h3 id="stat-ctr" class="card-value">6.8%</h3>
+                <span class="card-trend positive">🌟 उच्च आकर्षण</span>
             </div>
         </div>
+
+        <!-- 2. Audience Retention Curve Widget -->
+        <div class="analytics-card">
+            <div class="retention-header">
+                <h4 class="section-title">📉 ऑडियंस रिटेंशन कर्व</h4>
+                <span class="section-subtitle">हुक पॉइंट: मजबूत (92%)</span>
+            </div>
+            <p class="section-desc">वीडियो की समयावधि में दर्शक रुचि का ग्राफ:</p>
+            <div class="retention-chart-box">
+                <div class="chart-bar h-95"></div>
+                <div class="chart-bar h-80"></div>
+                <div class="chart-bar h-65"></div>
+                <div class="chart-bar h-78 spike"></div>
+                <div class="chart-bar h-55"></div>
+                <div class="chart-bar h-45"></div>
+                <div class="chart-bar h-28 drop"></div>
+                <div class="chart-bar h-35"></div>
+            </div>
+        </div>
+
+        <!-- 3. Engagement Density Map & 4. Comparison Panel -->
+        <div class="analytics-grid-row">
+            <!-- Engagement Density Map -->
+            <div class="analytics-card">
+                <h4 class="section-title">📊 एंगेजमेंट डेंसिटी मैप</h4>
+                <p class="section-desc">लाइक्स (<span id="map-likes">--</span>) और कमेंट्स (<span id="map-comments">--</span>):</p>
+                <div class="density-chart-box">
+                    <div class="density-bar h-40"></div>
+                    <div class="density-bar h-70"></div>
+                    <div class="density-bar h-90 peak"></div>
+                    <div class="density-bar h-50"></div>
+                    <div class="density-bar h-30"></div>
+                </div>
+            </div>
+
+            <!-- Performance Comparison Panel -->
+            <div class="analytics-card">
+                <h4 class="section-title">⚖️ परफॉर्मेंस तुलना</h4>
+                <div class="comparison-list">
+                    <div class="comparison-row">
+                        <span>व्यूज वेलोसिटी:</span>
+                        <span class="text-green">+22% तेज 🚀</span>
+                    </div>
+                    <div class="comparison-row">
+                        <span>ऑडियंस रिटेंशन:</span>
+                        <span class="text-green">बेहतर 🌟</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Actionable Insights Recommendation Engine -->
+        <div class="analytics-card insights-card">
+            <h4 class="insights-title">💡 AI एक्शनएबल इनसाइट्स & सुझाव</h4>
+            <p id="ai-insights-text" class="insights-text">
+                यूट्यूब स्टूडियो एपीआई से लाइव डेटा प्रोसेस हो रहा है...
+            </p>
+        </div>
+
     </main>
 
-    <!-- Analytics JavaScript Link -->
-    <script src="analytics.js?v=3"></script>
+    <!-- Script Link -->
+    <script src="analytics.js?v=6"></script>
 </body>
 </html>
