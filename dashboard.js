@@ -321,3 +321,28 @@ if (sendChatBtn && chatInput && chatMessages) {
         }
     });
 }
+
+// ==========================================
+// मास्टर सेटिंग पॉपअप (Modal) कंट्रोल लॉजिक
+// ==========================================
+const openSettingsBtn = document.getElementById('openMasterSettings');
+const settingsModal = document.getElementById('masterSettingsModal');
+const closeSettingsBtn = document.getElementById('closeModalBtn');
+
+if (openSettingsBtn && settingsModal) {
+    openSettingsBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'flex';
+    });
+}
+
+if (closeSettingsBtn && settingsModal) {
+    closeSettingsBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
+}
+
+window.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+        settingsModal.style.display = 'none';
+    }
+});

@@ -205,6 +205,48 @@ body.dashboard-body {
     word-break: break-all;
 }
 
+/* Master Setting Button Styles */
+.master-setting-btn-box {
+    cursor: pointer;
+    background: #161b22;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.2s;
+}
+
+.master-setting-btn-box:hover {
+    border-color: #58a6ff;
+}
+
+.master-setting-icon {
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.master-setting-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.master-setting-info h4 {
+    font-size: 13px;
+    color: #ffffff;
+    margin: 0;
+    font-weight: 600;
+}
+
+.master-setting-info span {
+    font-size: 10px;
+    color: #8b949e;
+    margin-top: 2px;
+}
+
 /* Analytics Button Styles */
 .analytics-btn-box {
     cursor: pointer;
@@ -383,6 +425,64 @@ body.dashboard-body {
     font-size: 15px;
     font-weight: bold;
     flex-shrink: 0;
+}
+
+
+/* --- Master Setting Modal Styles --- */
+.master-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.master-modal-content {
+    background: #161b22;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    width: 90%;
+    max-width: 400px;
+    border-radius: 16px;
+    padding: 20px;
+    color: #c9d1d9;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.master-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 12px;
+    margin-bottom: 15px;
+}
+
+.master-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #fff;
+}
+
+.master-modal-close {
+    background: none;
+    border: none;
+    color: #8b949e;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+}
+
+.master-modal-body p {
+    margin: 0;
+    font-size: 14px;
+    color: #8b949e;
+    text-align: center;
+    padding: 20px 0;
 }
 
 

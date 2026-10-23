@@ -26,6 +26,15 @@
                     </div>
                 </div>
 
+                <!-- ⚙️ Master Setting Button (एनालिटिक्स बॉक्स के ऊपर) -->
+                <div class="master-setting-btn-box" id="openMasterSettings">
+                    <span class="master-setting-icon">⚙️</span>
+                    <div class="master-setting-info">
+                        <h4>मास्टर सेटिंग</h4>
+                        <span>एडवांस्ड कॉन्फ़िगरेशन</span>
+                    </div>
+                </div>
+
                 <!-- Last Video Analytics Button -->
                 <div class="analytics-btn-box" onclick="window.location.href='analytics.html'">
                     <span class="analytics-icon">📊</span>
@@ -58,6 +67,19 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- मास्टर सेटिंग पॉपअप मॉडेल (Modal) -->
+    <div id="masterSettingsModal" class="master-modal-overlay" style="display: none;">
+        <div class="master-modal-content">
+            <div class="master-modal-header">
+                <h3>⚙️ मास्टर सेटिंग</h3>
+                <button id="closeModalBtn" class="master-modal-close">✕</button>
+            </div>
+            <div class="master-modal-body">
+                <p>यहाँ सेटिंग्स के विकल्प जल्द जोड़े जाएंगे।</p>
+            </div>
+        </div>
     </div>
 
     <!-- Dashboard JavaScript Link -->
