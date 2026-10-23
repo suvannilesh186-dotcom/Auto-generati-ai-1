@@ -10,87 +10,30 @@
 
     <!-- Top Header -->
     <header class="top-header">
-        <button class="menu-toggle-btn" onclick="window.location.href='index.html'" style="background: #21262d; border: 1px solid #30363d;">⬅</button>
+        <button class="menu-toggle-btn analytics-back-btn" onclick="window.location.href='index.html'">⬅</button>
         <div class="header-logo">AGC<span>.AI</span> ANALYTICS</div>
     </header>
 
-    <main class="main-content" style="padding: 20px; overflow-y: auto;">
+    <main class="main-content analytics-main">
         <div class="welcome-area">
             <h1>लास्ट वीडियो एनालिटिक्स</h1>
             <p>आपके आखिरी अपलोड किए गए YouTube वीडियो का विस्तृत डेटा और परफॉर्मेंस।</p>
         </div>
 
-        <div class="ai-chat-section" style="padding: 20px; gap: 15px; display: flex; flex-direction: column;">
-            <div style="background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d;">
-                <h3 style="color: #58a6ff; font-size: 16px; margin-bottom: 8px;" id="vid-title">वीडियो शीर्षक लोड हो रहा है...</h3>
-                <p style="color: #8b949e; font-size: 13px; margin-top: 5px;" id="vid-stats">व्यूज, लाइक्स और एंगेजमेंट डेटा फेच किया जा रहा है...</p>
+        <div class="ai-chat-section analytics-section">
+            <div class="analytics-card">
+                <h3 id="vid-title">वीडियो शीर्षक लोड हो रहा है...</h3>
+                <p id="vid-stats">व्यूज, लाइक्स और एंगेजमेंट डेटा फेच किया जा रहा है...</p>
             </div>
 
-            <div style="background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d;">
-                <h4 style="color: #ffffff; font-size: 14px; margin-bottom: 5px;">AI सुझाव (Performance Insights)</h4>
-                <p style="color: #8b949e; font-size: 13px;" id="vid-insights">लाइव डेटा सिंक्रनाइज होने के बाद AI यहाँ परफॉर्मेंस का विश्लेषण दिखाएगा।</p>
+            <div class="analytics-card">
+                <h4>AI सुझाव (Performance Insights)</h4>
+                <p id="vid-insights">लाइव डेटा सिंक्रनाइज होने के बाद AI यहाँ परफॉर्मेंस का विश्लेषण दिखाएगा।</p>
             </div>
         </div>
     </main>
 
-    <script>
-        async function fetchLastVideoAnalytics() {
-            const accessToken = localStorage.getItem('agc_access_token');
-            const titleElem = document.getElementById('vid-title');
-            const statsElem = document.getElementById('vid-stats');
-            const insightsElem = document.getElementById('vid-insights');
-
-            if (!accessToken) {
-                titleElem.innerText = "ऑथेंटिकेशन एरर";
-                statsElem.innerText = "कृपया डैशबोर्ड से दोबारा लॉगिन करें (एक्सेस टोकन नहीं मिला)।";
-                return;
-            }
-
-            try {
-                const channelRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=contentDetails&mine=true', {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-                const channelData = await channelRes.json();
-                
-                if (!channelData.items || channelData.items.length === 0) {
-                    throw new Error("यूट्यूब चैनल डेटा नहीं मिला।");
-                }
-
-                const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads;
-
-                const playlistRes = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=1`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-                const playlistData = await playlistRes.json();
-
-                if (!playlistData.items || playlistData.items.length === 0) {
-                    throw new Error("कोई वीडियो नहीं मिला।");
-                }
-
-                const latestVideo = playlistData.items[0].snippet;
-                const videoId = latestVideo.resourceId.videoId;
-                const videoTitle = latestVideo.title;
-
-                const statsRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoId}`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-                const statsData = await statsRes.json();
-
-                if (statsData.items && statsData.items.length > 0) {
-                    const stats = statsData.items[0].statistics;
-                    
-                    titleElem.innerText = videoTitle;
-                    statsElem.innerHTML = `👁️ <b>व्यूज:</b> ${stats.viewCount || 0} &nbsp;&nbsp;|&nbsp;&nbsp; 👍 <b>लाइक्स:</b> ${stats.likeCount || 0} &nbsp;&nbsp;|&nbsp;&nbsp; 💬 <b>कमेंट्स:</b> ${stats.commentCount || 0}`;
-                    insightsElem.innerText = `आपका यह आखिरी वीडियो लाइव डेटा के अनुसार ट्रैक हो गया है। व्यूज और एंगेजमेंट बेहतर तरीके से काम कर रहे हैं।`;
-                }
-            } catch (error) {
-                console.error("Analytics Error:", error);
-                titleElem.innerText = "डेटा लोड करने में विफल";
-                statsElem.innerText = `एरर: ${error.message}`;
-            }
-        }
-
-        window.onload = fetchLastVideoAnalytics;
-    </script>
+    <!-- Analytics JavaScript Link -->
+    <script src="analytics.js?v=3"></script>
 </body>
 </html>
