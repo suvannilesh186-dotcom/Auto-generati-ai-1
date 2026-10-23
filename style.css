@@ -205,7 +205,7 @@ body.dashboard-body {
     word-break: break-all;
 }
 
-/* Master Setting Button Styles */
+/* Master Setting Button Styles (Analytics के जैसी बिल्कुल परफ़ेक्ट स्टाइलिंग) */
 .master-setting-btn-box {
     cursor: pointer;
     background: #161b22;
@@ -239,12 +239,6 @@ body.dashboard-body {
     color: #ffffff;
     margin: 0;
     font-weight: 600;
-}
-
-.master-setting-info span {
-    font-size: 10px;
-    color: #8b949e;
-    margin-top: 2px;
 }
 
 /* Analytics Button Styles */
