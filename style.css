@@ -199,6 +199,49 @@ body.dashboard-body {
     word-break: break-all;
 }
 
+/* Analytics Button Styles */
+.analytics-btn-box {
+    cursor: pointer;
+    background: #161b22;
+    padding: 12px 15px;
+    border-radius: 12px;
+    border: 1px solid #30363d;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    transition: border-color 0.2s;
+}
+
+.analytics-btn-box:hover {
+    border-color: #58a6ff;
+}
+
+.analytics-icon {
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.analytics-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.analytics-info h4 {
+    font-size: 14px;
+    color: #ffffff;
+    margin: 0;
+    font-weight: 600;
+}
+
+.analytics-info span {
+    font-size: 11px;
+    color: #8b949e;
+    margin-top: 2px;
+}
+
 .sidebar-bottom {
     display: flex;
     flex-direction: column;
