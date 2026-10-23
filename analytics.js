@@ -73,12 +73,12 @@ async function fetchLastVideoAnalytics() {
             comments = parseInt(stats.commentCount || 0);
         }
 
-        // 4. YouTube Analytics API से असली वॉच टाइम और ड्यूरेशन फेच करें
+        // 4. YouTube Analytics API से असली वॉच टाइम और ड्यूरेशन फेच करें (Fixed filter syntax here)
         let realWatchMinutes = 0;
         let realAvgDurationSec = 0;
         try {
             const today = new Date().toISOString().split('T')[0];
-            const analyticsRes = await fetch(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==MINE&startDate=2024-01-01&endDate=${today}&metrics=estimatedMinutesWatched,averageViewDuration&filters==video==${videoId}`, {
+            const analyticsRes = await fetch(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel==MINE&startDate=2024-01-01&endDate=${today}&metrics=estimatedMinutesWatched,averageViewDuration&filters=video==${videoId}`, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
             const analyticsData = await analyticsRes.json();
