@@ -1,52 +1,60 @@
-<!-- Master Setting Controls -->
-<div class="space-y-4 text-left py-2">
-  
-  <!-- Short Video Toggle -->
-  <div class="flex items-center justify-between p-3.5 bg-[#0e1726] rounded-xl border border-gray-800">
-    <div>
-      <div class="font-semibold text-xs text-gray-200">⚡ Short Video</div>
-      <div class="text-[10px] text-gray-400">Enable Shorts Mode</div>
-    </div>
-    <label class="relative inline-flex items-center cursor-pointer">
-      <input type="checkbox" id="shortVideoToggle" class="sr-only peer">
-      <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-    </label>
-  </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Master Settings</title>
+  <!-- Link to External CSS -->
+  <link rel="stylesheet" href="./master-settings.css">
+</head>
+<body>
 
-  <!-- Long Video Toggle -->
-  <div class="flex items-center justify-between p-3.5 bg-[#0e1726] rounded-xl border border-gray-800">
-    <div>
-      <div class="font-semibold text-xs text-gray-200">🎥 Long Video</div>
-      <div class="text-[10px] text-gray-400" id="longVideoLabel">Auto-Story Generator on Schedule</div>
-    </div>
-    <label class="relative inline-flex items-center cursor-pointer">
-      <input type="checkbox" id="longVideoToggle" onchange="onLongVideoToggle(this)" class="sr-only peer">
-      <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-    </label>
-  </div>
-
-</div>
-
-<!-- Timing Setup Mini Modal -->
-<div id="timingSetupModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
-  <div class="bg-[#111927] border border-blue-500/40 rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-4">
+  <!-- Master Setting Container -->
+  <div class="settings-container">
     
-    <div class="flex justify-between items-center pb-2 border-b border-gray-800">
-      <h4 class="text-xs font-bold text-blue-400 flex items-center gap-1.5">
-        <span>⏰</span> Schedule Setup
-      </h4>
-      <button type="button" onclick="cancelTimingSetup()" class="text-gray-400 hover:text-white text-sm">✕</button>
+    <!-- Short Video Toggle -->
+    <div class="setting-item">
+      <div>
+        <div class="item-title">⚡ Short Video</div>
+        <div class="item-desc">Enable Shorts Mode</div>
+      </div>
+      <button type="button" class="toggle-btn" id="shortVideoBtn" onclick="toggleShortMode()">
+        <span class="toggle-knob"></span>
+      </button>
     </div>
 
-    <div>
-      <label class="text-[11px] text-gray-300 block mb-1.5">Set Trigger Time:</label>
-      <input type="time" id="scheduledTime" class="w-full bg-[#162238] border border-gray-700 text-sm rounded-lg p-2.5 text-white outline-none focus:border-blue-500">
-    </div>
-
-    <div class="flex gap-2 pt-1">
-      <button type="button" onclick="cancelTimingSetup()" class="w-1/2 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-medium">Cancel</button>
-      <button type="button" onclick="saveTimingSetup()" class="w-1/2 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow">Confirm</button>
+    <!-- Long Video Toggle -->
+    <div class="setting-item">
+      <div>
+        <div class="item-title">🎥 Long Video</div>
+        <div class="item-desc" id="longVideoLabel">Auto-Story Generator on Schedule</div>
+      </div>
+      <button type="button" class="toggle-btn" id="longVideoBtn" onclick="toggleLongMode()">
+        <span class="toggle-knob"></span>
+      </button>
     </div>
 
   </div>
-</div>
+
+  <!-- Timing Setup Mini Modal -->
+  <div id="timingSetupModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4 class="modal-title">⏰ Schedule Setup</h4>
+        <button type="button" class="close-btn" onclick="cancelTimingSetup()">✕</button>
+      </div>
+
+      <label class="input-label">Set Trigger Time:</label>
+      <input type="time" id="scheduledTime" class="time-input">
+
+      <div class="btn-row">
+        <button type="button" class="btn btn-cancel" onclick="cancelTimingSetup()">Cancel</button>
+        <button type="button" class="btn btn-confirm" onclick="saveTimingSetup()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Link to External JavaScript -->
+  <script src="./master-settings.js"></script>
+</body>
+</html>

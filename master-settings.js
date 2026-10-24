@@ -1,25 +1,38 @@
 let autoStoryInterval = null;
+let isLongVideoActive = false;
+let isShortVideoActive = false;
 
-// Handle Long Video toggle switch
-function onLongVideoToggle(checkbox) {
-  if (checkbox.checked) {
-    // Open timing popup when toggle is turned ON
-    document.getElementById('timingSetupModal').classList.remove('hidden');
+// Toggle Short Video Mode
+function toggleShortMode() {
+  const btn = document.getElementById('shortVideoBtn');
+  isShortVideoActive = !isShortVideoActive;
+  btn.classList.toggle('active', isShortVideoActive);
+}
+
+// Toggle Long Video Mode and open Timing Modal
+function toggleLongMode() {
+  const btn = document.getElementById('longVideoBtn');
+  
+  if (!isLongVideoActive) {
+    document.getElementById('timingSetupModal').style.display = 'flex';
   } else {
-    // Clear timer and storage when turned OFF
+    isLongVideoActive = false;
+    btn.classList.remove('active');
     if (autoStoryInterval) clearInterval(autoStoryInterval);
     document.getElementById('longVideoLabel').innerText = "Auto-Story Generator on Schedule";
     localStorage.removeItem('agc_target_time');
   }
 }
 
-// Cancel timing setup and revert toggle
+// Cancel Timing Setup
 function cancelTimingSetup() {
-  document.getElementById('timingSetupModal').classList.add('hidden');
-  document.getElementById('longVideoToggle').checked = false;
+  document.getElementById('timingSetupModal').style.display = 'none';
+  const btn = document.getElementById('longVideoBtn');
+  if (btn) btn.classList.remove('active');
+  isLongVideoActive = false;
 }
 
-// Save schedule and start watcher
+// Save Timing and Start Interval
 function saveTimingSetup() {
   const selectedTime = document.getElementById('scheduledTime').value;
 
@@ -28,16 +41,18 @@ function saveTimingSetup() {
     return;
   }
 
-  // Save timing in localStorage
-  localStorage.setItem('agc_target_time', selectedTime);
-  document.getElementById('timingSetupModal').classList.add('hidden');
-  document.getElementById('longVideoLabel').innerText = `Active Schedule: ${selectedTime}`;
+  isLongVideoActive = true;
+  const btn = document.getElementById('longVideoBtn');
+  if (btn) btn.classList.add('active');
 
-  // Start background checker
+  localStorage.setItem('agc_target_time', selectedTime);
+  document.getElementById('timingSetupModal').style.display = 'none';
+  document.getElementById('longVideoLabel').innerText = "Active Schedule: " + selectedTime;
+
   startStoryTimer(selectedTime);
 }
 
-// Watch current time every second
+// Background Timer Watcher
 function startStoryTimer(targetTime) {
   if (autoStoryInterval) clearInterval(autoStoryInterval);
 
@@ -45,9 +60,8 @@ function startStoryTimer(targetTime) {
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    const currentTime = `${hours}:${minutes}`;
+    const currentTime = hours + ":" + minutes;
 
-    // Trigger action when time matches
     if (currentTime === targetTime) {
       clearInterval(autoStoryInterval);
       callStoryGenerator();
@@ -55,7 +69,7 @@ function startStoryTimer(targetTime) {
   }, 1000);
 }
 
-// Send analytics context to AI chatbot input
+// Dispatch Prompt to Chatbot
 function callStoryGenerator() {
   const analyticsSummary = {
     views: "338",
@@ -65,17 +79,14 @@ function callStoryGenerator() {
     ctr: "5.2%"
   };
 
-  // Structured prompt for AI chatbot
-  const promptText = `
-[AUTO_SCHEDULE_TRIGGER]: Analyze previous video performance and generate a new long-form video story.
-- Analytics Context: ${analyticsSummary.views} views, ${analyticsSummary.watchTime} watch time, Hook Retention: ${analyticsSummary.hookPoint}, CTR: ${analyticsSummary.ctr}.
+  const promptText = 
+`[AUTO_SCHEDULE_TRIGGER]: Analyze previous video performance and generate a new long-form video story.
+- Analytics Context: ` + analyticsSummary.views + ` views, ` + analyticsSummary.watchTime + ` watch time, Hook Retention: ` + analyticsSummary.hookPoint + `, CTR: ` + analyticsSummary.ctr + `.
 - Instructions:
 1. Maintain the high hook point (92%) demonstrated in the analytics.
 2. Develop an engaging multi-character storyline suitable for a long video (10-20 mins).
-3. Provide character dialogue, rising action, and clear pacing.
-  `.trim();
+3. Provide character dialogue, rising action, and clear pacing.`;
 
-  // Find chat input and submit button
   const chatInput = document.querySelector('input[type="text"], textarea');
   const sendBtn = document.querySelector('button[type="submit"], #sendBtn, .send-button');
 
