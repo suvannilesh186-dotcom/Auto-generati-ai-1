@@ -201,7 +201,7 @@ function startLoaderTextRotation() {
 }
 
 // ==========================================
-// AI Chat Box Logic (Google Gemini 3.8 Flash)
+// AI Chat Box Logic (Google Gemini Fast Fixed)
 // ==========================================
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
@@ -262,27 +262,35 @@ if (sendChatBtn && chatInput && chatMessages) {
 
         startLoaderTextRotation();
 
+        // 8-Second Safety Timeout Controller
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         try {
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`;
+            // Correct official fast endpoint
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
 
             const response = await fetch(endpoint, {
                 method: 'POST',
+                signal: controller.signal,
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    system_instruction: {
-                        parts: [{ text: "You are AGC.AI, an advanced automation and assistant core." }]
-                    },
                     contents: [
                         {
                             role: "user",
-                            parts: [{ text: text }]
+                            parts: [{ text: `Instruction: You are AGC.AI Core. Provide direct, quick responses in 2-3 sentences.\nUser: ${text}` }]
                         }
-                    ]
+                    ],
+                    generationConfig: {
+                        temperature: 0.6,
+                        maxOutputTokens: 250 // Ultra-fast response ceiling
+                    }
                 })
             });
 
+            clearTimeout(timeoutId);
             const data = await response.json();
             
             if (loaderInterval) clearInterval(loaderInterval);
@@ -290,7 +298,7 @@ if (sendChatBtn && chatInput && chatMessages) {
                 chatMessages.removeChild(loadingMsg);
             }
 
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
+            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.length > 0) {
                 const aiReply = data.candidates[0].content.parts[0].text;
                 appendMessage(aiReply, 'ai');
             } else if (data.error) {
@@ -302,14 +310,17 @@ if (sendChatBtn && chatInput && chatMessages) {
                 throw new Error("Invalid response received from Gemini API");
             }
         } catch (error) {
-            console.error("AI Error:", error);
-            
+            clearTimeout(timeoutId);
             if (loaderInterval) clearInterval(loaderInterval);
             if (chatMessages.contains(loadingMsg)) {
                 chatMessages.removeChild(loadingMsg);
             }
             
-            appendMessage(`❌ एरर: ${error.message}`, 'ai');
+            if (error.name === 'AbortError') {
+                appendMessage("⚠️ नेटवर्क टाइमआउट: सर्वर ने बहुत अधिक समय लिया।", 'ai');
+            } else {
+                appendMessage(`❌ एरर: ${error.message}`, 'ai');
+            }
         }
 
         chatMessages.scrollTop = chatMessages.scrollHeight;
