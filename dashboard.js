@@ -201,7 +201,7 @@ function startLoaderTextRotation() {
 }
 
 // ==========================================
-// AI Chat Box Logic (Google Gemini Fast Engine)
+// AI Chat Box Logic (With High-Demand Auto-Retry)
 // ==========================================
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
@@ -262,64 +262,80 @@ if (sendChatBtn && chatInput && chatMessages) {
 
         startLoaderTextRotation();
 
-        // 25-Second Safety Timeout for stable mobile response
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000);
+        // High demand handling models list
+        const modelsToTry = [
+            'gemini-3.8-flash',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash'
+        ];
 
-        try {
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`;
+        let finalResponse = null;
+        let lastError = null;
 
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                signal: controller.signal,
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [
-                        {
-                            role: "user",
-                            parts: [{ text: `Instruction: You are AGC.AI Core. Answer concisely and quickly in 2-3 sentences.\nUser: ${text}` }]
+        for (const model of modelsToTry) {
+            // Har model ko 2 baar retry karenge agar demand spike ho
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+                try {
+                    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        signal: controller.signal,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            contents: [
+                                {
+                                    role: "user",
+                                    parts: [{ text: `Instruction: You are AGC.AI Core. Answer concisely and quickly in 2-3 sentences.\nUser: ${text}` }]
+                                }
+                            ],
+                            generationConfig: {
+                                temperature: 0.6,
+                                maxOutputTokens: 150
+                            }
+                        })
+                    });
+
+                    clearTimeout(timeoutId);
+                    const data = await response.json();
+
+                    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.length > 0) {
+                        finalResponse = data.candidates[0].content.parts[0].text;
+                        break;
+                    } else if (data.error) {
+                        lastError = data.error.message;
+                        // Agar High Demand (503) hai to 1.2 second wait karke retry karo
+                        if (data.error.message.includes('high demand') || data.error.code === 503) {
+                            await new Promise(res => setTimeout(res, 1200));
+                            continue;
+                        } else {
+                            break; // Doosra error hai to agle model par jao
                         }
-                    ],
-                    generationConfig: {
-                        temperature: 0.6,
-                        maxOutputTokens: 150
                     }
-                })
-            });
-
-            clearTimeout(timeoutId);
-            const data = await response.json();
-            
-            if (loaderInterval) clearInterval(loaderInterval);
-            if (loadingMsg.parentNode) {
-                loadingMsg.parentNode.removeChild(loadingMsg);
-            }
-
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.length > 0) {
-                const aiReply = data.candidates[0].content.parts[0].text;
-                appendMessage(aiReply, 'ai');
-            } else if (data.error) {
-                if (data.error.code === 400 || data.error.status === "INVALID_ARGUMENT") {
-                    localStorage.removeItem('gemini_api_key');
+                } catch (err) {
+                    clearTimeout(timeoutId);
+                    lastError = err.message;
+                    break;
                 }
-                throw new Error(data.error.message || "Google Gemini API Error");
-            } else {
-                throw new Error("Invalid response received from Gemini API");
             }
-        } catch (error) {
-            clearTimeout(timeoutId);
-            if (loaderInterval) clearInterval(loaderInterval);
-            if (loadingMsg.parentNode) {
-                loadingMsg.parentNode.removeChild(loadingMsg);
-            }
-            
-            if (error.name === 'AbortError') {
-                appendMessage("⚠️ नेटवर्क टाइमआउट: सर्वर ने बहुत अधिक समय लिया।", 'ai');
-            } else {
-                appendMessage(`❌ एरर: ${error.message}`, 'ai');
-            }
+
+            if (finalResponse) break; // Agar reply mil gaya to aage loop na chalayein
+        }
+
+        if (loaderInterval) clearInterval(loaderInterval);
+        if (loadingMsg.parentNode) {
+            loadingMsg.parentNode.removeChild(loadingMsg);
+        }
+
+        if (finalResponse) {
+            appendMessage(finalResponse, 'ai');
+        } else {
+            appendMessage(`⚠️ सर्वर लोड: ${lastError || "गूगल सर्वर पर अस्थायी रूप से लोड अधिक है। कृपया 10 सेकंड बाद पुनः भेजें।"}`, 'ai');
         }
 
         chatMessages.scrollTop = chatMessages.scrollHeight;
