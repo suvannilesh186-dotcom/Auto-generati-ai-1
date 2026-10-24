@@ -2,14 +2,27 @@ let autoStoryInterval = null;
 let isLongVideoActive = false;
 let isShortVideoActive = false;
 
-// Toggle Short Video Mode
+// 1. Restore saved state on load
+document.addEventListener("DOMContentLoaded", () => {
+  const savedTime = localStorage.getItem('agc_target_time');
+  if (savedTime) {
+    isLongVideoActive = true;
+    const btn = document.getElementById('longVideoBtn');
+    const label = document.getElementById('longVideoLabel');
+    if (btn) btn.classList.add('active');
+    if (label) label.innerText = "Active Schedule: " + savedTime;
+    startStoryTimer(savedTime);
+  }
+});
+
+// 2. Toggle Short Video Mode
 function toggleShortMode() {
   const btn = document.getElementById('shortVideoBtn');
   isShortVideoActive = !isShortVideoActive;
   btn.classList.toggle('active', isShortVideoActive);
 }
 
-// Toggle Long Video Mode and open Timing Modal
+// 3. Toggle Long Video Mode
 function toggleLongMode() {
   const btn = document.getElementById('longVideoBtn');
   
@@ -24,7 +37,7 @@ function toggleLongMode() {
   }
 }
 
-// Cancel Timing Setup
+// 4. Cancel Timing Setup
 function cancelTimingSetup() {
   document.getElementById('timingSetupModal').style.display = 'none';
   const btn = document.getElementById('longVideoBtn');
@@ -32,7 +45,7 @@ function cancelTimingSetup() {
   isLongVideoActive = false;
 }
 
-// Save Timing and Start Interval
+// 5. Save Timing and Start Interval
 function saveTimingSetup() {
   const selectedTime = document.getElementById('scheduledTime').value;
 
@@ -52,7 +65,7 @@ function saveTimingSetup() {
   startStoryTimer(selectedTime);
 }
 
-// Background Timer Watcher
+// 6. Background Timer Watcher
 function startStoryTimer(targetTime) {
   if (autoStoryInterval) clearInterval(autoStoryInterval);
 
@@ -69,33 +82,39 @@ function startStoryTimer(targetTime) {
   }, 1000);
 }
 
-// Dispatch Prompt to Chatbot
+// 7. Dispatch Prompt with Dynamic Analytics to Chatbot
 function callStoryGenerator() {
-  const analyticsSummary = {
-    views: "338",
-    watchTime: "12.8 hours",
-    avgDuration: "2:10 min",
-    hookPoint: "92% strong",
-    ctr: "5.2%"
+  // Read real fetched analytics from storage (or fallback gracefully)
+  let analyticsSummary = {
+    views: "350+",
+    watchTime: "14.2 hours",
+    avgDuration: "2:45 min",
+    hookPoint: "90% strong",
+    ctr: "5.5%"
   };
+
+  const storedAnalytics = localStorage.getItem('agc_latest_analytics');
+  if (storedAnalytics) {
+    try {
+      analyticsSummary = JSON.parse(storedAnalytics);
+    } catch (e) {
+      console.warn("Analytics JSON parse error, using fallback.");
+    }
+  }
 
   const promptText = 
 `[AUTO_SCHEDULE_TRIGGER]: Analyze previous video performance and generate a new long-form video story.
-- Analytics Context: ` + analyticsSummary.views + ` views, ` + analyticsSummary.watchTime + ` watch time, Hook Retention: ` + analyticsSummary.hookPoint + `, CTR: ` + analyticsSummary.ctr + `.
+- Analytics Context: ${analyticsSummary.views} views, ${analyticsSummary.watchTime} watch time, Hook Retention: ${analyticsSummary.hookPoint}, CTR: ${analyticsSummary.ctr}.
 - Instructions:
-1. Maintain the high hook point (92%) demonstrated in the analytics.
+1. Maintain the high hook point demonstrated in the analytics.
 2. Develop an engaging multi-character storyline suitable for a long video (10-20 mins).
 3. Provide character dialogue, rising action, and clear pacing.`;
 
-  const chatInput = document.querySelector('input[type="text"], textarea');
-  const sendBtn = document.querySelector('button[type="submit"], #sendBtn, .send-button');
-
-  if (chatInput) {
-    chatInput.value = promptText;
-    if (sendBtn) {
-      sendBtn.click();
-    }
-  } else {
-    console.log("Chatbot Prompt Dispatched:", promptText);
+  // Send message to parent dashboard
+  if (window.parent) {
+    window.parent.postMessage({
+      type: 'AUTO_TRIGGER_PROMPT',
+      prompt: promptText
+    }, '*');
   }
 }

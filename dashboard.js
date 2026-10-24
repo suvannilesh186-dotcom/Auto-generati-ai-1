@@ -7,7 +7,7 @@ import { getAuth, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPop
 import { CONFIG } from './config.js';
 
 let auth;
-let loaderInterval = null; // लोडर टेक्स्ट रोटेशन टाइमर
+let loaderInterval = null; // Loader text rotation timer
 
 const loaderMessages = [
     "Thinking...",
@@ -86,7 +86,7 @@ try {
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
 
-    // यूजर लॉगिन स्टेट चेक करना
+    // User authentication state listener
     onAuthStateChanged(auth, (user) => {
         if (user) {
             const emailElem = document.getElementById('user-email');
@@ -117,7 +117,7 @@ try {
         }
     });
 
-    // लॉगआउट फंक्शनैलिटी
+    // Logout Functionality
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -134,7 +134,7 @@ try {
     console.error("Firebase Setup Error:", err);
 }
 
-// साइडबार टॉगल लॉजिक (हैमर बटन ⚡) और बाहर क्लिक करने पर बंद होने का लॉजिक
+// Sidebar toggle logic and click-outside handler
 const menuToggleBtn = document.getElementById('menuToggleBtn');
 const sidebar = document.getElementById('sidebar');
 
@@ -144,7 +144,6 @@ if (menuToggleBtn && sidebar) {
         sidebar.classList.toggle('active');
     });
 
-    // बाहर कहीं भी क्लिक या टच करने पर साइडबार बंद करने का लॉजिक
     document.addEventListener('click', (e) => {
         if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && !menuToggleBtn.contains(e.target)) {
             sidebar.classList.remove('active');
@@ -152,7 +151,7 @@ if (menuToggleBtn && sidebar) {
     });
 }
 
-// डायरेक्ट पॉपअप लॉगिन फंक्शन (YouTube Scope के साथ)
+// Direct popup login (with YouTube Scope)
 const handleYouTubePopupLogin = async () => {
     try {
         const provider = new GoogleAuthProvider();
@@ -184,7 +183,7 @@ if (loginBtn) {
     loginBtn.addEventListener('click', handleYouTubePopupLogin);
 }
 
-// लोडर टेक्स्ट रोटेशन फंक्शन
+// Loader text rotation function
 function startLoaderTextRotation() {
     if (loaderInterval) clearInterval(loaderInterval);
     
@@ -320,10 +319,18 @@ if (sendChatBtn && chatInput && chatMessages) {
             handleSendMessage();
         }
     });
+
+    // Listen for Auto-Schedule triggers from master-settings iframe
+    window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'AUTO_TRIGGER_PROMPT') {
+            chatInput.value = event.data.prompt;
+            handleSendMessage();
+        }
+    });
 }
 
 // ==========================================
-// मास्टर सेटिंग पॉपअप (Modal) कंट्रोल लॉजिक
+// Master Setting Modal Control Logic
 // ==========================================
 const openSettingsBtn = document.getElementById('openMasterSettings');
 const settingsModal = document.getElementById('masterSettingsModal');

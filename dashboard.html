@@ -68,15 +68,15 @@
         </main>
     </div>
 
-    <!-- Master Setting Modal -->
+    <!-- Master Setting Modal (Loads master-settings.html via clean iframe) -->
     <div id="masterSettingsModal" class="master-modal-overlay" style="display: none;">
-        <div class="master-modal-content">
-            <div class="master-modal-header">
-                <h3>⚙️ Master Setting</h3>
-                <button id="closeModalBtn" class="master-modal-close">✕</button>
+        <div class="master-modal-content" style="max-width: 440px; padding: 0; overflow: hidden; border-radius: 16px; background: #131b2e; border: 1px solid #1e293b;">
+            <div class="master-modal-header" style="padding: 12px 16px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 14px; color: #f1f5f9;">⚙️ Master Setting</h3>
+                <button id="closeModalBtn" class="master-modal-close" style="background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer;">✕</button>
             </div>
-            <div class="master-modal-body">
-                <p>यहाँ सेटिंग्स के विकल्प जल्द जोड़े जाएंगे।</p>
+            <div class="master-modal-body" style="padding: 0;">
+                <iframe src="master-settings.html" style="width: 100%; height: 280px; border: none; display: block; background: transparent;"></iframe>
             </div>
         </div>
     </div>
