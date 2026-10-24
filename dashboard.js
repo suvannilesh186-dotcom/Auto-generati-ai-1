@@ -208,7 +208,9 @@ function startLoaderTextRotation() {
     }, 2500);
 }
 
-// AI Chat Box Logic
+// ==========================================
+// AI Chat Box Logic (Google Gemini API - Free)
+// ==========================================
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendChatBtn = document.getElementById('sendChatBtn');
@@ -221,14 +223,15 @@ if (sendChatBtn && chatInput && chatMessages) {
         appendMessage(text, 'user');
         chatInput.value = '';
 
-        let openAiKey = localStorage.getItem('openai_api_key');
+        let geminiKey = localStorage.getItem('gemini_api_key');
         
-        if (!openAiKey) {
-            openAiKey = prompt("कृपया अपनी OpenAI API Key दर्ज करें (यह आपके ब्राउज़र में सुरक्षित रहेगी):");
-            if (openAiKey) {
-                localStorage.setItem('openai_api_key', openAiKey.trim());
+        if (!geminiKey) {
+            geminiKey = prompt("कृपया अपनी Google Gemini API Key दर्ज करें (यह आपके ब्राउज़र में सुरक्षित रहेगी):");
+            if (geminiKey) {
+                geminiKey = geminiKey.trim();
+                localStorage.setItem('gemini_api_key', geminiKey);
             } else {
-                appendMessage("⚠️ AI API Key न मिलने के कारण चैट प्रोसेस नहीं हो सकी।", 'ai');
+                appendMessage("⚠️ Google Gemini API Key न मिलने के कारण चैट प्रोसेस नहीं हो सकी।", 'ai');
                 return;
             }
         }
@@ -268,19 +271,23 @@ if (sendChatBtn && chatInput && chatMessages) {
         startLoaderTextRotation();
 
         try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('openai_api_key')}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: "gpt-4o-mini",
-                    messages: [
-                        { role: "system", content: "You are AGC.AI, an advanced automation and assistant core." },
-                        { role: "user", content: text }
-                    ],
-                    max_tokens: 500
+                    system_instruction: {
+                        parts: [{ text: "You are AGC.AI, an advanced automation and assistant core." }]
+                    },
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [{ text: text }]
+                        }
+                    ]
                 })
             });
 
@@ -291,13 +298,16 @@ if (sendChatBtn && chatInput && chatMessages) {
                 chatMessages.removeChild(loadingMsg);
             }
 
-            if (data.choices && data.choices.length > 0) {
-                const aiReply = data.choices[0].message.content;
+            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.length > 0) {
+                const aiReply = data.candidates[0].content.parts[0].text;
                 appendMessage(aiReply, 'ai');
             } else if (data.error) {
-                throw new Error(data.error.message || "OpenAI API Error");
+                if (data.error.code === 400 || data.error.status === "INVALID_ARGUMENT") {
+                    localStorage.removeItem('gemini_api_key');
+                }
+                throw new Error(data.error.message || "Google Gemini API Error");
             } else {
-                throw new Error("Invalid response from OpenAI");
+                throw new Error("Invalid response received from Gemini API");
             }
         } catch (error) {
             console.error("AI Error:", error);
