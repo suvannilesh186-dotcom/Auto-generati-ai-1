@@ -267,8 +267,8 @@ if (sendChatBtn && chatInput && chatMessages) {
         const timeoutId = setTimeout(() => controller.abort(), 8000);
 
         try {
-            // Supported Google Gemini Flash model endpoint
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+            // Updated to the active and supported gemini-3.8-flash model
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`;
 
             const response = await fetch(endpoint, {
                 method: 'POST',
