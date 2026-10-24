@@ -262,12 +262,11 @@ if (sendChatBtn && chatInput && chatMessages) {
 
         startLoaderTextRotation();
 
-        // 8-Second Safety Timeout Controller
+        // 25-Second Safety Timeout for stable mobile response
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
 
         try {
-            // Updated to the active and supported gemini-3.8-flash model
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`;
 
             const response = await fetch(endpoint, {
@@ -285,7 +284,7 @@ if (sendChatBtn && chatInput && chatMessages) {
                     ],
                     generationConfig: {
                         temperature: 0.6,
-                        maxOutputTokens: 250
+                        maxOutputTokens: 150
                     }
                 })
             });
@@ -294,8 +293,8 @@ if (sendChatBtn && chatInput && chatMessages) {
             const data = await response.json();
             
             if (loaderInterval) clearInterval(loaderInterval);
-            if (chatMessages.contains(loadingMsg)) {
-                chatMessages.removeChild(loadingMsg);
+            if (loadingMsg.parentNode) {
+                loadingMsg.parentNode.removeChild(loadingMsg);
             }
 
             if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.length > 0) {
@@ -312,8 +311,8 @@ if (sendChatBtn && chatInput && chatMessages) {
         } catch (error) {
             clearTimeout(timeoutId);
             if (loaderInterval) clearInterval(loaderInterval);
-            if (chatMessages.contains(loadingMsg)) {
-                chatMessages.removeChild(loadingMsg);
+            if (loadingMsg.parentNode) {
+                loadingMsg.parentNode.removeChild(loadingMsg);
             }
             
             if (error.name === 'AbortError') {
