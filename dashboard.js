@@ -7,7 +7,7 @@ import { getAuth, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPop
 import { CONFIG } from './config.js';
 
 let auth;
-let loaderInterval = null; // Loader text rotation timer
+let loaderInterval = null;
 
 const loaderMessages = [
     "Thinking...",
@@ -17,7 +17,6 @@ const loaderMessages = [
     "Almost ready..."
 ];
 
-// Helper to append chat message easily
 function appendMessage(text, sender) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
@@ -28,7 +27,6 @@ function appendMessage(text, sender) {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// YouTube Channel Data Fetching Function
 async function fetchYouTubeChannelData(accessToken) {
     try {
         const response = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true', {
@@ -86,7 +84,6 @@ try {
     const app = initializeApp(firebaseConfig);
     auth = getAuth(app);
 
-    // User authentication state listener
     onAuthStateChanged(auth, (user) => {
         if (user) {
             const emailElem = document.getElementById('user-email');
@@ -97,7 +94,6 @@ try {
             if (nameElem && user.displayName) nameElem.innerText = user.displayName;
             if (logoElem && user.photoURL) logoElem.src = user.photoURL;
 
-            // Welcome Message with User Name
             const chatMessages = document.getElementById('chatMessages');
             if (chatMessages && chatMessages.children.length === 0) {
                 const userName = user.displayName ? user.displayName.split(' ')[0] : 'Commander';
@@ -117,7 +113,6 @@ try {
         }
     });
 
-    // Logout Functionality
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -134,7 +129,6 @@ try {
     console.error("Firebase Setup Error:", err);
 }
 
-// Sidebar toggle logic and click-outside handler
 const menuToggleBtn = document.getElementById('menuToggleBtn');
 const sidebar = document.getElementById('sidebar');
 
@@ -151,7 +145,6 @@ if (menuToggleBtn && sidebar) {
     });
 }
 
-// Direct popup login (with YouTube Scope)
 const handleYouTubePopupLogin = async () => {
     try {
         const provider = new GoogleAuthProvider();
@@ -183,7 +176,6 @@ if (loginBtn) {
     loginBtn.addEventListener('click', handleYouTubePopupLogin);
 }
 
-// Loader text rotation function
 function startLoaderTextRotation() {
     if (loaderInterval) clearInterval(loaderInterval);
     
@@ -195,13 +187,13 @@ function startLoaderTextRotation() {
 
         msgIndex = (msgIndex + 1) % loaderMessages.length;
         
-        textElement.style.opacity = 0;
+        textElement.style.opacity = '0';
         
         setTimeout(() => {
             const el = document.getElementById('loader-text');
             if (el) {
                 el.textContent = loaderMessages[msgIndex];
-                el.style.opacity = 1;
+                el.style.opacity = '1';
             }
         }, 250);
 
@@ -209,7 +201,7 @@ function startLoaderTextRotation() {
 }
 
 // ==========================================
-// AI Chat Box Logic (Google Gemini API - Free)
+// AI Chat Box Logic (Google Gemini 3.8 Flash)
 // ==========================================
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
@@ -271,7 +263,7 @@ if (sendChatBtn && chatInput && chatMessages) {
         startLoaderTextRotation();
 
         try {
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`;
 
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -298,7 +290,7 @@ if (sendChatBtn && chatInput && chatMessages) {
                 chatMessages.removeChild(loadingMsg);
             }
 
-            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.length > 0) {
+            if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
                 const aiReply = data.candidates[0].content.parts[0].text;
                 appendMessage(aiReply, 'ai');
             } else if (data.error) {
@@ -330,7 +322,6 @@ if (sendChatBtn && chatInput && chatMessages) {
         }
     });
 
-    // Listen for Auto-Schedule triggers from master-settings iframe
     window.addEventListener('message', (event) => {
         if (event.data && event.data.type === 'AUTO_TRIGGER_PROMPT') {
             chatInput.value = event.data.prompt;
