@@ -201,7 +201,7 @@ function startLoaderTextRotation() {
 }
 
 // ==========================================
-// AI Chat Box Logic (Google Gemini Fast Fixed)
+// AI Chat Box Logic (Google Gemini v1 Stable Fast)
 // ==========================================
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
@@ -267,8 +267,8 @@ if (sendChatBtn && chatInput && chatMessages) {
         const timeoutId = setTimeout(() => controller.abort(), 8000);
 
         try {
-            // Correct official fast endpoint
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+            // Stable official v1 endpoint to eliminate 404/not supported errors
+            const endpoint = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
 
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -280,12 +280,12 @@ if (sendChatBtn && chatInput && chatMessages) {
                     contents: [
                         {
                             role: "user",
-                            parts: [{ text: `Instruction: You are AGC.AI Core. Provide direct, quick responses in 2-3 sentences.\nUser: ${text}` }]
+                            parts: [{ text: `Instruction: You are AGC.AI Core. Answer concisely and quickly in 2-3 sentences.\nUser: ${text}` }]
                         }
                     ],
                     generationConfig: {
                         temperature: 0.6,
-                        maxOutputTokens: 250 // Ultra-fast response ceiling
+                        maxOutputTokens: 250
                     }
                 })
             });
