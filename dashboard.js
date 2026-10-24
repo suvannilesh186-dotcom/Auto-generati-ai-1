@@ -201,7 +201,7 @@ function startLoaderTextRotation() {
 }
 
 // ==========================================
-// AI Chat Box Logic (Google Gemini v1 Stable Fast)
+// AI Chat Box Logic (Google Gemini Fast Engine)
 // ==========================================
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
@@ -267,8 +267,8 @@ if (sendChatBtn && chatInput && chatMessages) {
         const timeoutId = setTimeout(() => controller.abort(), 8000);
 
         try {
-            // Stable official v1 endpoint to eliminate 404/not supported errors
-            const endpoint = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+            // Supported Google Gemini Flash model endpoint
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
 
             const response = await fetch(endpoint, {
                 method: 'POST',
