@@ -652,3 +652,64 @@ body.dashboard-body {
         display: none;
     }
 }
+/* 🕒 Recent Scripts Box Styling (Added for 48h Temporary Storage) */
+.sidebar-section {
+    margin-top: 15px;
+    border-top: 1px solid #21262d;
+    padding-top: 12px;
+}
+
+.sidebar-section h4 {
+    color: #58a6ff;
+    margin-left: 10px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#recentProjectsList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 110px;
+    overflow-y: auto;
+    background: #090d12;
+    border-radius: 8px;
+    border: 1px solid #21262d;
+}
+
+#recentProjectsList li {
+    padding: 8px 10px;
+    border-bottom: 1px solid #161b22;
+    cursor: pointer;
+    font-size: 11px;
+    color: #c9d1d9;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#recentProjectsList li:hover {
+    background: #161b22;
+    color: #58a6ff;
+}
+
+/* Custom Scrollbar for Recent Scripts List */
+#recentProjectsList::-webkit-scrollbar {
+    width: 4px;
+}
+
+#recentProjectsList::-webkit-scrollbar-track {
+    background: #090d12;
+}
+
+#recentProjectsList::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 4px;
+}
+
+#recentProjectsList::-webkit-scrollbar-thumb:hover {
+    background: #58a6ff;
+}

@@ -8,7 +8,7 @@ import { CONFIG } from './config.js';
 
 let auth;
 let loaderInterval = null;
-let currentProcessPhase = 'idle'; // 🕵️ जासूस ट्रैकर
+let currentProcessPhase = 'idle'; // 🕵️ Jaasoos tracker
 
 const loaderMessages = [
     "Thinking...",
@@ -31,9 +31,7 @@ function appendMessage(text, sender) {
 async function fetchYouTubeChannelData(accessToken) {
     try {
         const response = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true', {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
+            headers: { 'Authorization': `Bearer ${accessToken}` }
         });
         const data = await response.json();
         
@@ -187,20 +185,17 @@ function askForApiKey() {
 
         modal.innerHTML = `
             <h3 style="margin-top:0; margin-bottom:10px; color:#58a6ff;">API Setup Required</h3>
-            <p style="font-size:13px;color:#aaa;margin-bottom:20px;">Please enter your AI Gateway details (Velona, AICredits, etc.) to continue.</p>
-            
+            <p style="font-size:13px;color:#aaa;margin-bottom:20px;">Please enter your AI Gateway details to continue.</p>
             <div style="text-align:left; margin-bottom: 15px;">
                 <label style="font-size:12px; color:#888; margin-bottom:5px; display:block;">Base URL</label>
                 <input type="text" id="popupBaseUrl" value="https://auto-generati-ai-1.onrender.com/api/chat" style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:#101018;color:#fff;box-sizing:border-box;outline:none;">
             </div>
-            
             <div style="text-align:left; margin-bottom: 20px;">
                 <label style="font-size:12px; color:#888; margin-bottom:5px; display:block;">API Key</label>
                 <input type="password" id="popupApiKey" placeholder="sk-..." style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:#101018;color:#fff;box-sizing:border-box;outline:none;">
             </div>
-
-            <button id="saveApiBtn" style="background:#58a6ff;color:#fff;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;width:100%;font-weight:bold;margin-bottom:10px;transition:0.3s;">Save Settings</button>
-            <button id="cancelApiBtn" style="background:transparent;color:#aaa;border:1px solid #444;padding:10px 20px;border-radius:6px;cursor:pointer;width:100%;transition:0.3s;">Cancel</button>
+            <button id="saveApiBtn" style="background:#58a6ff;color:#fff;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;width:100%;font-weight:bold;margin-bottom:10px;">Save Settings</button>
+            <button id="cancelApiBtn" style="background:transparent;color:#aaa;border:1px solid #444;padding:10px 20px;border-radius:6px;cursor:pointer;width:100%;">Cancel</button>
         `;
 
         overlay.appendChild(modal);
@@ -253,40 +248,13 @@ if (sendChatBtn && chatInput && chatMessages) {
 
         const loadingMsg = document.createElement('div');
         loadingMsg.className = 'ai-loader chat-inline-loader';
-        loadingMsg.innerHTML = `
-            <div class="ai-loader__ambient-glow"></div>
-            <div class="ai-loader__main-composition">
-                <div class="ai-loader__orbits-container">
-                    <svg class="ai-loader__svg-ring outer-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
-                        <circle class="track-ring" cx="100" cy="100" r="86" />
-                        <circle class="segmented-arc outer-arc" cx="100" cy="100" r="86" />
-                    </svg>
-                    <svg class="ai-loader__svg-ring inner-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
-                        <circle class="track-ring" cx="100" cy="100" r="70" />
-                        <circle class="segmented-arc inner-arc" cx="100" cy="100" r="70" />
-                    </svg>
-                </div>
-                <div class="ai-loader__inner-disc"></div>
-                <div class="ai-loader__logo">
-                    <img src="assets/logo.png" class="ai-logo-center" alt="AGC AI Core Logo">
-                </div>
-            </div>
-            <div class="ai-loader__status-pill">
-                <div class="ai-loader__dots" aria-hidden="true">
-                    <span class="ai-loader__dot ai-loader__dot--1"></span>
-                    <span class="ai-loader__dot ai-loader__dot--2"></span>
-                    <span class="ai-loader__dot ai-loader__dot--3"></span>
-                </div>
-                <span class="ai-loader__text" id="loader-text">Thinking...</span>
-            </div>
-        `;
+        loadingMsg.innerHTML = `<span class="ai-loader__text" id="loader-text">Thinking...</span>`;
         chatMessages.appendChild(loadingMsg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         startLoaderTextRotation();
 
         const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
-
         let finalResponse = null;
         let lastError = null;
 
@@ -325,9 +293,7 @@ if (sendChatBtn && chatInput && chatMessages) {
                         if (response.status === 429 || response.status === 503) {
                             await new Promise(res => setTimeout(res, 1200));
                             continue;
-                        } else {
-                            break; 
-                        }
+                        } else { break; }
                     }
                 } catch (err) {
                     clearTimeout(timeoutId);
@@ -339,12 +305,10 @@ if (sendChatBtn && chatInput && chatMessages) {
         }
 
         if (loaderInterval) clearInterval(loaderInterval);
-        if (loadingMsg.parentNode) {
-            loadingMsg.parentNode.removeChild(loadingMsg);
-        }
+        if (loadingMsg.parentNode) loadingMsg.parentNode.removeChild(loadingMsg);
 
         // ==========================================
-        // 🕵️ जासूस कोड और टेम्परेरी स्टोरेज लॉजिक
+        // 🕵️ Jaasoos Code & 48-Hour Temporary Storage Logic
         // ==========================================
         if (finalResponse) {
             appendMessage(finalResponse, 'ai');
@@ -376,10 +340,14 @@ if (sendChatBtn && chatInput && chatMessages) {
                     script: finalResponse
                 };
                 
+                // LocalStorage mein save 
                 localStorage.setItem('agc_recent_project_' + Date.now(), JSON.stringify(projectData));
                 
+                // Sidebar list ko turant update karo
+                if(window.updateSidebarList) window.updateSidebarList();
+                
                 setTimeout(() => {
-                    appendMessage("✅ सीन-बाय-सीन डेटा टेम्परेरी स्टोरेज (Recent Projects) में सेव कर लिया गया है।", 'ai');
+                    appendMessage("✅ सीन-बाय-सीन डेटा 'Recent Scripts (48h)' में सेव कर लिया गया है।", 'ai');
                 }, 1000);
             }
             else {
@@ -387,7 +355,7 @@ if (sendChatBtn && chatInput && chatMessages) {
             }
 
         } else {
-            appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है। कृपया दोबारा प्रयास करें।"}`, 'ai');
+            appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है।"}`, 'ai');
             currentProcessPhase = 'idle';
         }
 
@@ -396,9 +364,7 @@ if (sendChatBtn && chatInput && chatMessages) {
 
     sendChatBtn.addEventListener('click', handleSendMessage);
     chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            handleSendMessage();
-        }
+        if (e.key === 'Enter') handleSendMessage();
     });
 }
 
@@ -407,34 +373,90 @@ const settingsModal = document.getElementById('masterSettingsModal');
 const closeSettingsBtn = document.getElementById('closeModalBtn');
 
 if (openSettingsBtn && settingsModal) {
-    openSettingsBtn.addEventListener('click', () => {
-        settingsModal.style.display = 'flex';
-    });
+    openSettingsBtn.addEventListener('click', () => { settingsModal.style.display = 'flex'; });
 }
-
 if (closeSettingsBtn && settingsModal) {
-    closeSettingsBtn.addEventListener('click', () => {
-        settingsModal.style.display = 'none';
-    });
+    closeSettingsBtn.addEventListener('click', () => { settingsModal.style.display = 'none'; });
 }
-
 window.addEventListener('click', (e) => {
-    if (e.target === settingsModal) {
-        settingsModal.style.display = 'none';
-    }
+    if (e.target === settingsModal) { settingsModal.style.display = 'none'; }
 });
 
 // ==========================================
-// Event Listener for Automation Triggers (FIXED)
+// Event Listener for Automation Triggers
 // ==========================================
 window.addEventListener('message', (event) => {
-    // अब यह Long और Short दोनों वीडियो सिग्नल्स को पकड़ेगा और जासूस को एक्टिव करेगा
     if (event.data && (event.data.type === 'AUTO_TRIGGER_PROMPT' || event.data.type === 'AUTO_TRIGGER_PROMPT_SHORT')) {
         currentProcessPhase = 'story_generation'; 
         chatInput.value = event.data.prompt;
         const sendChatBtn = document.getElementById('sendChatBtn');
-        if (sendChatBtn) {
-            sendChatBtn.click();
-        }
+        if (sendChatBtn) sendChatBtn.click();
     }
 });
+
+// ==========================================
+// 🕒 Smart Temporary Chat Storage & Scrollable List Logic
+// ==========================================
+function loadAndCleanRecentProjects() {
+    const recentList = document.getElementById('recentProjectsList');
+    if (!recentList) return;
+    recentList.innerHTML = ''; 
+
+    const now = Date.now();
+    const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000; 
+    let projects = [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('agc_recent_project_')) {
+            const timestampStr = key.replace('agc_recent_project_', '');
+            const projectTime = parseInt(timestampStr, 10);
+            
+            if (now - projectTime > FORTY_EIGHT_HOURS) {
+                localStorage.removeItem(key);
+                i--; 
+            } else {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    projects.push({ key: key, time: projectTime, data: data });
+                } catch(e) {}
+            }
+        }
+    }
+
+    projects.sort((a, b) => b.time - a.time);
+
+    if (projects.length === 0) {
+        recentList.innerHTML = '<li style="padding: 8px 12px; color: #666; font-size: 11px; text-align: center;">No scripts yet</li>';
+        return;
+    }
+
+    projects.forEach(proj => {
+        const li = document.createElement('li');
+        
+        // Data format clean show karne ke liye
+        li.innerHTML = `<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; width: 100%;">📄 Script (${proj.data.time})</span>`;
+        
+        li.onclick = () => {
+            const chatMessages = document.getElementById('chatMessages');
+            if(chatMessages) {
+                chatMessages.innerHTML = ''; 
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message ai-message';
+                msgDiv.innerText = proj.data.script;
+                chatMessages.appendChild(msgDiv);
+                
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) sidebar.classList.remove('active');
+            }
+        };
+        
+        recentList.appendChild(li);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadAndCleanRecentProjects();
+});
+
+window.updateSidebarList = loadAndCleanRecentProjects;
