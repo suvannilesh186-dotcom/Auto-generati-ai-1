@@ -24,6 +24,32 @@ document.addEventListener("DOMContentLoaded", () => {
     if (label) label.innerText = "Active Schedule: " + savedShortTime;
     startShortStoryTimer(savedShortTime);
   }
+
+  // 3rd Button: Auto Scene Splitter Restore
+  const splitBtn = document.getElementById('sceneSplitterBtn');
+  const isSplitterActive = localStorage.getItem('agc_auto_split_active');
+  if (isSplitterActive === 'true' && splitBtn) {
+      splitBtn.style.background = '#58a6ff';
+      splitBtn.style.color = '#fff';
+      splitBtn.innerText = "🎬 Auto Scene & VO Splitter (ON)";
+  }
+
+  if (splitBtn) {
+      splitBtn.addEventListener('click', () => {
+          const currentState = localStorage.getItem('agc_auto_split_active');
+          if (currentState === 'true') {
+              localStorage.setItem('agc_auto_split_active', 'false');
+              splitBtn.style.background = 'transparent';
+              splitBtn.style.color = '#aaa';
+              splitBtn.innerText = "🎬 Auto Scene & VO Splitter (OFF)";
+          } else {
+              localStorage.setItem('agc_auto_split_active', 'true');
+              splitBtn.style.background = '#58a6ff';
+              splitBtn.style.color = '#fff';
+              splitBtn.innerText = "🎬 Auto Scene & VO Splitter (ON)";
+          }
+      });
+  }
 });
 
 function toggleShortMode() {
@@ -129,7 +155,6 @@ function callStoryGenerator() {
   const storedAnalytics = localStorage.getItem('agc_latest_analytics');
   if (storedAnalytics) { try { analyticsSummary = JSON.parse(storedAnalytics); } catch (e) {} }
 
-  // प्रॉम्प्ट में हिंदी की कमांड जोड़ दी गई है
   const promptText = `[AUTO_SCHEDULE_TRIGGER]: Analyze previous video performance and generate a new long-form video story.
 - Analytics Context: ${analyticsSummary.views} views, ${analyticsSummary.watchTime} watch time, Hook Retention: ${analyticsSummary.hookPoint}, CTR: ${analyticsSummary.ctr}.
 - Instructions:
@@ -145,7 +170,6 @@ function callStoryGenerator() {
 }
 
 function callShortStoryGenerator() {
-  // प्रॉम्प्ट में हिंदी की कमांड जोड़ दी गई है
   const promptText = `[AUTO_SCHEDULE_TRIGGER_SHORT]: Generate a new YouTube Short script.
 - Instructions:
 1. Create a fast-paced, highly engaging 60-second storyline.

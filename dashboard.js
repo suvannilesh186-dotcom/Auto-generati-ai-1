@@ -8,6 +8,7 @@ import { CONFIG } from './config.js';
 
 let auth;
 let loaderInterval = null;
+let currentProcessPhase = 'idle'; // 🕵️ जासूस ट्रैकर: चेक करेगा कि AI अभी क्या बना रहा है
 
 const loaderMessages = [
     "Thinking...",
@@ -292,7 +293,7 @@ if (sendChatBtn && chatInput && chatMessages) {
         for (const model of modelsToTry) {
             for (let attempt = 1; attempt <= 2; attempt++) {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000); // Timeout increased for long scripts
+                const timeoutId = setTimeout(() => controller.abort(), 60000); 
 
                 try {
                     const response = await fetch(baseUrl, {
@@ -305,12 +306,11 @@ if (sendChatBtn && chatInput && chatMessages) {
                         body: JSON.stringify({
                             model: model,
                             messages: [
-                                // यहाँ हमने राइटर को डिटेल में हिंदी में लिखने का निर्देश दिया है
-                                { role: "system", content: "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and highly engaging long-form scripts with full character dialogues in HINDI." },
+                                { role: "system", content: "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and highly engaging scripts with full character dialogues in HINDI." },
                                 { role: "user", content: text }
                             ],
                             temperature: 0.7,
-                            max_tokens: 3000 // टोकन लिमिट बढ़ा दी गई है ताकि कहानी बीच में न कटे
+                            max_tokens: 3000
                         })
                     });
 
@@ -343,10 +343,56 @@ if (sendChatBtn && chatInput && chatMessages) {
             loadingMsg.parentNode.removeChild(loadingMsg);
         }
 
+        // ==========================================
+        // 🕵️ जासूस कोड और टेम्परेरी स्टोरेज लॉजिक
+        // ==========================================
         if (finalResponse) {
             appendMessage(finalResponse, 'ai');
+
+            const isSplitterON = localStorage.getItem('agc_auto_split_active') === 'true';
+
+            // फेज़ 1: अगर कहानी जनरेट हुई है और बटन ON है
+            if (currentProcessPhase === 'story_generation' && isSplitterON) {
+                currentProcessPhase = 'scene_splitting'; 
+                
+                setTimeout(() => {
+                    const splitPrompt = `[AUTO_SCENE_SPLITTER]: आपने जो ऊपर कहानी जनरेट की है, उसे सीन-बाय-सीन (Scene 1, Scene 2) में तोड़ो। 
+हर सीन के लिए मुझे यह 3 चीज़ें स्पष्ट HINDI में चाहिए:
+1. Setting (सीन कहाँ का है)
+2. Character Action & Attire (हीरो क्या कर रहा है और क्या पहना है)
+3. Voiceover/Dialogue (सीन का डायलॉग)
+ध्यान रहे, पूरा आउटपुट सिर्फ HINDI भाषा में हो।`;
+                    
+                    chatInput.value = splitPrompt;
+                    const sendBtn = document.getElementById('sendChatBtn');
+                    if(sendBtn) sendBtn.click(); // ऑटोमैटिक सेंड
+                }, 3000); // 3 सेकंड का ब्रेक ताकि ब्राउज़र हैंग न हो
+            } 
+            // फेज़ 2: अगर सीन-बाय-सीन भी टूट कर आ गया है (टेंपरेरी सेव)
+            else if (currentProcessPhase === 'scene_splitting') {
+                currentProcessPhase = 'idle'; 
+                
+                const timestamp = new Date().toLocaleString();
+                const projectData = {
+                    time: timestamp,
+                    script: finalResponse
+                };
+                
+                // लोकल स्टोरेज में सेव 
+                localStorage.setItem('agc_recent_project_' + Date.now(), JSON.stringify(projectData));
+                
+                // स्क्रीन पर अलर्ट
+                setTimeout(() => {
+                    appendMessage("✅ सीन-बाय-सीन डेटा टेम्परेरी स्टोरेज (Recent Projects) में सेव कर लिया गया है।", 'ai');
+                }, 1000);
+            }
+            else {
+                currentProcessPhase = 'idle'; // नार्मल चैट मोड
+            }
+
         } else {
             appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है। कृपया दोबारा प्रयास करें।"}`, 'ai');
+            currentProcessPhase = 'idle';
         }
 
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -383,11 +429,19 @@ window.addEventListener('click', (e) => {
 });
 
 // ==========================================
-// Event Listener for Automation Triggers (Cleaned & Updated)
+// Event Listener for Automation Triggers
 // ==========================================
-// यह हिस्सा Long और Short दोनों वीडियो के सिग्नल पकड़ेगा
 window.addEventListener('message', (event) => {
-    if (event.data && (event.data.type === 'AUTO_TRIGGER_PROMPT' || event.data.type === 'AUTO_TRIGGER_PROMPT_SHORT')) {
+    if (event.data && event.data.type === 'AUTO_TRIGGER_PROMPT') {
+        currentProcessPhase = 'story_generation'; // 🕵️ ट्रैक किया कि लॉन्ग स्टोरी बन रही है
+        chatInput.value = event.data.prompt;
+        const sendChatBtn = document.getElementById('sendChatBtn');
+        if (sendChatBtn) {
+            sendChatBtn.click();
+        }
+    }
+    else if (event.data && event.data.type === 'AUTO_TRIGGER_PROMPT_SHORT') {
+        currentProcessPhase = 'idle'; // 🕵️ शॉर्ट्स को स्प्लिट नहीं करेंगे
         chatInput.value = event.data.prompt;
         const sendChatBtn = document.getElementById('sendChatBtn');
         if (sendChatBtn) {
