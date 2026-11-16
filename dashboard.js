@@ -8,7 +8,7 @@ import { CONFIG } from './config.js';
 
 let auth;
 let loaderInterval = null;
-let currentProcessPhase = 'idle'; // 🕵️ जासूस ट्रैकर: चेक करेगा कि AI अभी क्या बना रहा है
+let currentProcessPhase = 'idle'; // 🕵️ जासूस ट्रैकर
 
 const loaderMessages = [
     "Thinking...",
@@ -351,7 +351,6 @@ if (sendChatBtn && chatInput && chatMessages) {
 
             const isSplitterON = localStorage.getItem('agc_auto_split_active') === 'true';
 
-            // फेज़ 1: अगर कहानी जनरेट हुई है और बटन ON है
             if (currentProcessPhase === 'story_generation' && isSplitterON) {
                 currentProcessPhase = 'scene_splitting'; 
                 
@@ -365,10 +364,9 @@ if (sendChatBtn && chatInput && chatMessages) {
                     
                     chatInput.value = splitPrompt;
                     const sendBtn = document.getElementById('sendChatBtn');
-                    if(sendBtn) sendBtn.click(); // ऑटोमैटिक सेंड
-                }, 3000); // 3 सेकंड का ब्रेक ताकि ब्राउज़र हैंग न हो
+                    if(sendBtn) sendBtn.click(); 
+                }, 3000); 
             } 
-            // फेज़ 2: अगर सीन-बाय-सीन भी टूट कर आ गया है (टेंपरेरी सेव)
             else if (currentProcessPhase === 'scene_splitting') {
                 currentProcessPhase = 'idle'; 
                 
@@ -378,16 +376,14 @@ if (sendChatBtn && chatInput && chatMessages) {
                     script: finalResponse
                 };
                 
-                // लोकल स्टोरेज में सेव 
                 localStorage.setItem('agc_recent_project_' + Date.now(), JSON.stringify(projectData));
                 
-                // स्क्रीन पर अलर्ट
                 setTimeout(() => {
                     appendMessage("✅ सीन-बाय-सीन डेटा टेम्परेरी स्टोरेज (Recent Projects) में सेव कर लिया गया है।", 'ai');
                 }, 1000);
             }
             else {
-                currentProcessPhase = 'idle'; // नार्मल चैट मोड
+                currentProcessPhase = 'idle'; 
             }
 
         } else {
@@ -429,19 +425,12 @@ window.addEventListener('click', (e) => {
 });
 
 // ==========================================
-// Event Listener for Automation Triggers
+// Event Listener for Automation Triggers (FIXED)
 // ==========================================
 window.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'AUTO_TRIGGER_PROMPT') {
-        currentProcessPhase = 'story_generation'; // 🕵️ ट्रैक किया कि लॉन्ग स्टोरी बन रही है
-        chatInput.value = event.data.prompt;
-        const sendChatBtn = document.getElementById('sendChatBtn');
-        if (sendChatBtn) {
-            sendChatBtn.click();
-        }
-    }
-    else if (event.data && event.data.type === 'AUTO_TRIGGER_PROMPT_SHORT') {
-        currentProcessPhase = 'idle'; // 🕵️ शॉर्ट्स को स्प्लिट नहीं करेंगे
+    // अब यह Long और Short दोनों वीडियो सिग्नल्स को पकड़ेगा और जासूस को एक्टिव करेगा
+    if (event.data && (event.data.type === 'AUTO_TRIGGER_PROMPT' || event.data.type === 'AUTO_TRIGGER_PROMPT_SHORT')) {
+        currentProcessPhase = 'story_generation'; 
         chatInput.value = event.data.prompt;
         const sendChatBtn = document.getElementById('sendChatBtn');
         if (sendChatBtn) {
