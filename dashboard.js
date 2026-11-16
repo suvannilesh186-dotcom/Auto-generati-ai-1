@@ -62,8 +62,6 @@ async function fetchYouTubeChannelData(accessToken) {
                 }
                 subSpan.innerText = `Subscribers: ${subscriberCount}`;
             }
-        } else {
-            console.warn("YouTube API returned no channel items. Token might lack youtube.readonly scope.");
         }
     } catch (error) {
         console.error("YouTube API Error:", error);
@@ -101,11 +99,7 @@ try {
             }
 
             const token = localStorage.getItem('agc_access_token');
-            if (token) {
-                fetchYouTubeChannelData(token);
-            } else {
-                console.warn("agc_access_token is missing in localStorage. YouTube features may fail.");
-            }
+            if (token) fetchYouTubeChannelData(token);
         } else {
             if (!window.location.href.includes('index.html')) {
                 window.location.href = 'index.html';
@@ -119,12 +113,9 @@ try {
             signOut(auth).then(() => {
                 localStorage.removeItem('agc_access_token');
                 window.location.href = 'index.html';
-            }).catch((error) => {
-                console.error("Logout Error:", error);
             });
         });
     }
-
 } catch (err) {
     console.error("Firebase Setup Error:", err);
 }
@@ -137,7 +128,6 @@ if (menuToggleBtn && sidebar) {
         e.stopPropagation();
         sidebar.classList.toggle('active');
     });
-
     document.addEventListener('click', (e) => {
         if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && !menuToggleBtn.contains(e.target)) {
             sidebar.classList.remove('active');
@@ -158,8 +148,6 @@ const handleYouTubePopupLogin = async () => {
             localStorage.setItem('agc_access_token', credential.accessToken);
             fetchYouTubeChannelData(credential.accessToken);
             window.location.reload();
-        } else {
-            console.error("OAuth Access Token missing.");
         }
     } catch (error) {
         console.error("Popup Login Error:", error);
@@ -167,41 +155,81 @@ const handleYouTubePopupLogin = async () => {
 };
 
 const switchBtn = document.getElementById('switchChannelBtn');
-if (switchBtn) {
-    switchBtn.addEventListener('click', handleYouTubePopupLogin);
-}
-
 const loginBtn = document.getElementById('loginBtn');
-if (loginBtn) {
-    loginBtn.addEventListener('click', handleYouTubePopupLogin);
-}
+if (switchBtn) switchBtn.addEventListener('click', handleYouTubePopupLogin);
+if (loginBtn) loginBtn.addEventListener('click', handleYouTubePopupLogin);
 
 function startLoaderTextRotation() {
     if (loaderInterval) clearInterval(loaderInterval);
-    
     let msgIndex = 0;
-    
     loaderInterval = setInterval(() => {
         const textElement = document.getElementById('loader-text');
         if (!textElement) return;
-
         msgIndex = (msgIndex + 1) % loaderMessages.length;
-        
         textElement.style.opacity = '0';
-        
         setTimeout(() => {
-            const el = document.getElementById('loader-text');
-            if (el) {
-                el.textContent = loaderMessages[msgIndex];
-                el.style.opacity = '1';
+            if (textElement) {
+                textElement.textContent = loaderMessages[msgIndex];
+                textElement.style.opacity = '1';
             }
         }, 250);
-
     }, 2500);
 }
 
 // ==========================================
-// AI Chat Box Logic (With High-Demand Auto-Retry)
+// Custom API Key Popup UI Logic
+// ==========================================
+function askForApiKey() {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(5px);';
+
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:#1a1a24;padding:25px;border-radius:12px;width:320px;text-align:center;color:#fff;font-family:sans-serif;box-shadow: 0 8px 30px rgba(0,0,0,0.6);border: 1px solid #333;';
+
+        modal.innerHTML = `
+            <h3 style="margin-top:0; margin-bottom:10px; color:#58a6ff;">API Setup Required</h3>
+            <p style="font-size:13px;color:#aaa;margin-bottom:20px;">Please enter your AI Gateway details (Velona, AICredits, etc.) to continue.</p>
+            
+            <div style="text-align:left; margin-bottom: 15px;">
+                <label style="font-size:12px; color:#888; margin-bottom:5px; display:block;">Base URL</label>
+                <input type="text" id="popupBaseUrl" value="https://api.velona.in/v1/chat/completions" style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:#101018;color:#fff;box-sizing:border-box;outline:none;">
+            </div>
+            
+            <div style="text-align:left; margin-bottom: 20px;">
+                <label style="font-size:12px; color:#888; margin-bottom:5px; display:block;">API Key</label>
+                <input type="password" id="popupApiKey" placeholder="sk-..." style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:#101018;color:#fff;box-sizing:border-box;outline:none;">
+            </div>
+
+            <button id="saveApiBtn" style="background:#58a6ff;color:#fff;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;width:100%;font-weight:bold;margin-bottom:10px;transition:0.3s;">Save Settings</button>
+            <button id="cancelApiBtn" style="background:transparent;color:#aaa;border:1px solid #444;padding:10px 20px;border-radius:6px;cursor:pointer;width:100%;transition:0.3s;">Cancel</button>
+        `;
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        document.getElementById('saveApiBtn').addEventListener('click', () => {
+            const key = document.getElementById('popupApiKey').value.trim();
+            const url = document.getElementById('popupBaseUrl').value.trim();
+            if (key && url) {
+                localStorage.setItem('apiKey', key);
+                localStorage.setItem('baseUrl', url);
+                document.body.removeChild(overlay);
+                resolve(true);
+            } else {
+                alert('कृपया Base URL और API Key दोनों दर्ज करें।');
+            }
+        });
+
+        document.getElementById('cancelApiBtn').addEventListener('click', () => {
+            document.body.removeChild(overlay);
+            resolve(false);
+        });
+    });
+}
+
+// ==========================================
+// AI Chat Box Logic (OpenAI/Gateway Format)
 // ==========================================
 const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
@@ -215,17 +243,18 @@ if (sendChatBtn && chatInput && chatMessages) {
         appendMessage(text, 'user');
         chatInput.value = '';
 
-        let geminiKey = localStorage.getItem('gemini_api_key');
+        let apiKey = localStorage.getItem('apiKey');
+        let baseUrl = localStorage.getItem('baseUrl');
         
-        if (!geminiKey) {
-            geminiKey = prompt("कृपया अपनी Google Gemini API Key दर्ज करें (यह आपके ब्राउज़र में सुरक्षित रहेगी):");
-            if (geminiKey) {
-                geminiKey = geminiKey.trim();
-                localStorage.setItem('gemini_api_key', geminiKey);
-            } else {
-                appendMessage("⚠️ Google Gemini API Key न मिलने के कारण चैट प्रोसेस नहीं हो सकी।", 'ai');
+        // अगर API Key नहीं है, तो कस्टम पॉपअप ओपन करें
+        if (!apiKey || !baseUrl) {
+            const isSaved = await askForApiKey();
+            if (!isSaved) {
+                appendMessage("⚠️ API Key न मिलने के कारण जनरेशन रोक दिया गया।", 'ai');
                 return;
             }
+            apiKey = localStorage.getItem('apiKey');
+            baseUrl = localStorage.getItem('baseUrl');
         }
 
         const loadingMsg = document.createElement('div');
@@ -262,59 +291,49 @@ if (sendChatBtn && chatInput && chatMessages) {
 
         startLoaderTextRotation();
 
-        // High demand handling models list
-        const modelsToTry = [
-            'gemini-3.8-flash',
-            'gemini-2.5-flash',
-            'gemini-2.0-flash'
-        ];
+        // OpenAI/Gateway Models List
+        const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
 
         let finalResponse = null;
         let lastError = null;
 
         for (const model of modelsToTry) {
-            // Har model ko 2 baar retry karenge agar demand spike ho
             for (let attempt = 1; attempt <= 2; attempt++) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 12000);
 
                 try {
-                    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-
-                    const response = await fetch(endpoint, {
+                    const response = await fetch(baseUrl, {
                         method: 'POST',
                         signal: controller.signal,
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
                         },
                         body: JSON.stringify({
-                            contents: [
-                                {
-                                    role: "user",
-                                    parts: [{ text: `Instruction: You are AGC.AI Core. Answer concisely and quickly in 2-3 sentences.\nUser: ${text}` }]
-                                }
+                            model: model,
+                            messages: [
+                                { role: "system", content: "You are AGC.AI Core. Answer concisely and quickly in 2-3 sentences." },
+                                { role: "user", content: text }
                             ],
-                            generationConfig: {
-                                temperature: 0.6,
-                                maxOutputTokens: 150
-                            }
+                            temperature: 0.6,
+                            max_tokens: 150
                         })
                     });
 
                     clearTimeout(timeoutId);
                     const data = await response.json();
 
-                    if (data.candidates && data.candidates.length > 0 && data.candidates[0].content?.parts?.length > 0) {
-                        finalResponse = data.candidates[0].content.parts[0].text;
+                    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+                        finalResponse = data.choices[0].message.content;
                         break;
                     } else if (data.error) {
                         lastError = data.error.message;
-                        // Agar High Demand (503) hai to 1.2 second wait karke retry karo
-                        if (data.error.message.includes('high demand') || data.error.code === 503) {
+                        if (response.status === 429 || response.status === 503) {
                             await new Promise(res => setTimeout(res, 1200));
                             continue;
                         } else {
-                            break; // Doosra error hai to agle model par jao
+                            break; 
                         }
                     }
                 } catch (err) {
@@ -323,8 +342,7 @@ if (sendChatBtn && chatInput && chatMessages) {
                     break;
                 }
             }
-
-            if (finalResponse) break; // Agar reply mil gaya to aage loop na chalayein
+            if (finalResponse) break; 
         }
 
         if (loaderInterval) clearInterval(loaderInterval);
@@ -335,7 +353,7 @@ if (sendChatBtn && chatInput && chatMessages) {
         if (finalResponse) {
             appendMessage(finalResponse, 'ai');
         } else {
-            appendMessage(`⚠️ सर्वर लोड: ${lastError || "गूगल सर्वर पर अस्थायी रूप से लोड अधिक है। कृपया 10 सेकंड बाद पुनः भेजें।"}`, 'ai');
+            appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है। कृपया दोबारा प्रयास करें।"}`, 'ai');
         }
 
         chatMessages.scrollTop = chatMessages.scrollHeight;
