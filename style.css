@@ -642,16 +642,22 @@ body.dashboard-body {
     letter-spacing: 0.2px;
 }
 
-/* Desktop View Adjustments */
-@media (min-width: 768px) {
-    .sidebar {
-        position: relative;
-        transform: translateX(0);
-    }
-    .menu-toggle-btn {
-        display: none;
-    }
+/* 🛠️ Fix for Desktop Site Mode on Mobile: Sidebar stays hidden by default, controlled strictly by Hamburger Button */
+.sidebar {
+    position: absolute !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s ease-in-out !important;
+    z-index: 99 !important;
 }
+
+.sidebar.active {
+    transform: translateX(0) !important;
+}
+
+.menu-toggle-btn {
+    display: flex !important;
+}
+
 /* 🕒 Recent Scripts Box Styling (Added for 48h Temporary Storage) */
 .sidebar-section {
     margin-top: 15px;
