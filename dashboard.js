@@ -120,4 +120,278 @@ try {
     console.error("Firebase Setup Error:", err);
 }
 
-const menuToggle
+const menuToggleBtn = document.getElementById('menuToggleBtn');
+const sidebar = document.getElementById('sidebar');
+
+if (menuToggleBtn && sidebar) {
+    menuToggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sidebar.classList.toggle('active');
+    });
+    document.addEventListener('click', (e) => {
+        if (sidebar.classList.contains('active') && !sidebar.contains(e.target) && !menuToggleBtn.contains(e.target)) {
+            sidebar.classList.remove('active');
+        }
+    });
+}
+
+const handleYouTubePopupLogin = async () => {
+    try {
+        const provider = new GoogleAuthProvider();
+        provider.addScope('https://www.googleapis.com/auth/youtube.readonly');
+        provider.setCustomParameters({ prompt: 'select_account' });
+        
+        const result = await signInWithPopup(auth, provider);
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        
+        if (credential && credential.accessToken) {
+            localStorage.setItem('agc_access_token', credential.accessToken);
+            fetchYouTubeChannelData(credential.accessToken);
+            window.location.reload();
+        }
+    } catch (error) {
+        console.error("Popup Login Error:", error);
+    }
+};
+
+const switchBtn = document.getElementById('switchChannelBtn');
+const loginBtn = document.getElementById('loginBtn');
+if (switchBtn) switchBtn.addEventListener('click', handleYouTubePopupLogin);
+if (loginBtn) loginBtn.addEventListener('click', handleYouTubePopupLogin);
+
+function startLoaderTextRotation() {
+    if (loaderInterval) clearInterval(loaderInterval);
+    let msgIndex = 0;
+    loaderInterval = setInterval(() => {
+        const textElement = document.getElementById('loader-text');
+        if (!textElement) return;
+        msgIndex = (msgIndex + 1) % loaderMessages.length;
+        textElement.style.opacity = '0';
+        setTimeout(() => {
+            if (textElement) {
+                textElement.textContent = loaderMessages[msgIndex];
+                textElement.style.opacity = '1';
+            }
+        }, 250);
+    }, 2500);
+}
+
+function askForApiKey() {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:99999;backdrop-filter:blur(5px);';
+
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:#1a1a24;padding:25px;border-radius:12px;width:320px;text-align:center;color:#fff;font-family:sans-serif;box-shadow: 0 8px 30px rgba(0,0,0,0.6);border: 1px solid #333;';
+
+        modal.innerHTML = `
+            <h3 style="margin-top:0; margin-bottom:10px; color:#58a6ff;">API Setup Required</h3>
+            <p style="font-size:13px;color:#aaa;margin-bottom:20px;">Please enter your AI Gateway details (Velona, AICredits, etc.) to continue.</p>
+            
+            <div style="text-align:left; margin-bottom: 15px;">
+                <label style="font-size:12px; color:#888; margin-bottom:5px; display:block;">Base URL</label>
+                <input type="text" id="popupBaseUrl" value="https://auto-generati-ai-1.onrender.com/api/chat" style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:#101018;color:#fff;box-sizing:border-box;outline:none;">
+            </div>
+            
+            <div style="text-align:left; margin-bottom: 20px;">
+                <label style="font-size:12px; color:#888; margin-bottom:5px; display:block;">API Key</label>
+                <input type="password" id="popupApiKey" placeholder="sk-..." style="width:100%;padding:10px;border-radius:6px;border:1px solid #444;background:#101018;color:#fff;box-sizing:border-box;outline:none;">
+            </div>
+
+            <button id="saveApiBtn" style="background:#58a6ff;color:#fff;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;width:100%;font-weight:bold;margin-bottom:10px;transition:0.3s;">Save Settings</button>
+            <button id="cancelApiBtn" style="background:transparent;color:#aaa;border:1px solid #444;padding:10px 20px;border-radius:6px;cursor:pointer;width:100%;transition:0.3s;">Cancel</button>
+        `;
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+
+        document.getElementById('saveApiBtn').addEventListener('click', () => {
+            const key = document.getElementById('popupApiKey').value.trim();
+            const url = document.getElementById('popupBaseUrl').value.trim();
+            if (key && url) {
+                localStorage.setItem('apiKey', key);
+                localStorage.setItem('baseUrl', url);
+                document.body.removeChild(overlay);
+                resolve(true);
+            } else {
+                alert('कृपया Base URL और API Key दोनों दर्ज करें।');
+            }
+        });
+
+        document.getElementById('cancelApiBtn').addEventListener('click', () => {
+            document.body.removeChild(overlay);
+            resolve(false);
+        });
+    });
+}
+
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const sendChatBtn = document.getElementById('sendChatBtn');
+
+if (sendChatBtn && chatInput && chatMessages) {
+    const handleSendMessage = async () => {
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        appendMessage(text, 'user');
+        chatInput.value = '';
+
+        let apiKey = localStorage.getItem('apiKey');
+        let baseUrl = localStorage.getItem('baseUrl');
+        
+        if (!apiKey || !baseUrl) {
+            const isSaved = await askForApiKey();
+            if (!isSaved) {
+                appendMessage("⚠️ API Key न मिलने के कारण जनरेशन रोक दिया गया।", 'ai');
+                return;
+            }
+            apiKey = localStorage.getItem('apiKey');
+            baseUrl = localStorage.getItem('baseUrl');
+        }
+
+        const loadingMsg = document.createElement('div');
+        loadingMsg.className = 'ai-loader chat-inline-loader';
+        loadingMsg.innerHTML = `
+            <div class="ai-loader__ambient-glow"></div>
+            <div class="ai-loader__main-composition">
+                <div class="ai-loader__orbits-container">
+                    <svg class="ai-loader__svg-ring outer-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
+                        <circle class="track-ring" cx="100" cy="100" r="86" />
+                        <circle class="segmented-arc outer-arc" cx="100" cy="100" r="86" />
+                    </svg>
+                    <svg class="ai-loader__svg-ring inner-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
+                        <circle class="track-ring" cx="100" cy="100" r="70" />
+                        <circle class="segmented-arc inner-arc" cx="100" cy="100" r="70" />
+                    </svg>
+                </div>
+                <div class="ai-loader__inner-disc"></div>
+                <div class="ai-loader__logo">
+                    <img src="assets/logo.png" class="ai-logo-center" alt="AGC AI Core Logo">
+                </div>
+            </div>
+            <div class="ai-loader__status-pill">
+                <div class="ai-loader__dots" aria-hidden="true">
+                    <span class="ai-loader__dot ai-loader__dot--1"></span>
+                    <span class="ai-loader__dot ai-loader__dot--2"></span>
+                    <span class="ai-loader__dot ai-loader__dot--3"></span>
+                </div>
+                <span class="ai-loader__text" id="loader-text">Thinking...</span>
+            </div>
+        `;
+        chatMessages.appendChild(loadingMsg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        startLoaderTextRotation();
+
+        const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
+
+        let finalResponse = null;
+        let lastError = null;
+
+        for (const model of modelsToTry) {
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // Timeout increased for long scripts
+
+                try {
+                    const response = await fetch(baseUrl, {
+                        method: 'POST',
+                        signal: controller.signal,
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: model,
+                            messages: [
+                                // यहाँ हमने राइटर को डिटेल में हिंदी में लिखने का निर्देश दिया है
+                                { role: "system", content: "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and highly engaging long-form scripts with full character dialogues in HINDI." },
+                                { role: "user", content: text }
+                            ],
+                            temperature: 0.7,
+                            max_tokens: 3000 // टोकन लिमिट बढ़ा दी गई है ताकि कहानी बीच में न कटे
+                        })
+                    });
+
+                    clearTimeout(timeoutId);
+                    const data = await response.json();
+
+                    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+                        finalResponse = data.choices[0].message.content;
+                        break;
+                    } else if (data.error) {
+                        lastError = data.error.message;
+                        if (response.status === 429 || response.status === 503) {
+                            await new Promise(res => setTimeout(res, 1200));
+                            continue;
+                        } else {
+                            break; 
+                        }
+                    }
+                } catch (err) {
+                    clearTimeout(timeoutId);
+                    lastError = err.message;
+                    break;
+                }
+            }
+            if (finalResponse) break; 
+        }
+
+        if (loaderInterval) clearInterval(loaderInterval);
+        if (loadingMsg.parentNode) {
+            loadingMsg.parentNode.removeChild(loadingMsg);
+        }
+
+        if (finalResponse) {
+            appendMessage(finalResponse, 'ai');
+        } else {
+            appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है। कृपया दोबारा प्रयास करें।"}`, 'ai');
+        }
+
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    };
+
+    sendChatBtn.addEventListener('click', handleSendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            handleSendMessage();
+        }
+    });
+}
+
+const openSettingsBtn = document.getElementById('openMasterSettings');
+const settingsModal = document.getElementById('masterSettingsModal');
+const closeSettingsBtn = document.getElementById('closeModalBtn');
+
+if (openSettingsBtn && settingsModal) {
+    openSettingsBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'flex';
+    });
+}
+
+if (closeSettingsBtn && settingsModal) {
+    closeSettingsBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
+}
+
+window.addEventListener('click', (e) => {
+    if (e.target === settingsModal) {
+        settingsModal.style.display = 'none';
+    }
+});
+
+// ==========================================
+// Event Listener for Automation Triggers (Cleaned & Updated)
+// ==========================================
+// यह हिस्सा Long और Short दोनों वीडियो के सिग्नल पकड़ेगा
+window.addEventListener('message', (event) => {
+    if (event.data && (event.data.type === 'AUTO_TRIGGER_PROMPT' || event.data.type === 'AUTO_TRIGGER_PROMPT_SHORT')) {
+        chatInput.value = event.data.prompt;
+        const sendChatBtn = document.getElementById('sendChatBtn');
+        if (sendChatBtn) {
+            sendChatBtn.click();
+        }
+    }
+});
