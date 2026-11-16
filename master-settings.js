@@ -148,7 +148,7 @@ function startShortStoryTimer(targetTime) {
   }, 1000);
 }
 
-// 7. Dispatch Prompt (Long Video)
+// 7. Dispatch Prompt (Long Video) (UPDATED)
 function callStoryGenerator() {
   let analyticsSummary = { views: "350+", watchTime: "14.2 hours", avgDuration: "2:45 min", hookPoint: "90% strong", ctr: "5.5%" };
   const storedAnalytics = localStorage.getItem('agc_latest_analytics');
@@ -161,12 +161,13 @@ function callStoryGenerator() {
 2. Develop an engaging multi-character storyline suitable for a long video (10-20 mins).
 3. Provide character dialogue, rising action, and clear pacing.`;
 
-  if (window.parent) {
-    window.parent.postMessage({ type: 'AUTO_TRIGGER_PROMPT', prompt: promptText }, '*');
+  window.postMessage({ type: 'AUTO_TRIGGER_PROMPT', prompt: promptText }, '*');
+  if (window.parent !== window) {
+      window.parent.postMessage({ type: 'AUTO_TRIGGER_PROMPT', prompt: promptText }, '*');
   }
 }
 
-// 7b. Dispatch Prompt (Short Video)
+// 7b. Dispatch Prompt (Short Video) (UPDATED)
 function callShortStoryGenerator() {
   const promptText = `[AUTO_SCHEDULE_TRIGGER_SHORT]: Generate a new YouTube Short.
 - Instructions:
@@ -174,7 +175,8 @@ function callShortStoryGenerator() {
 2. Hook the viewer in the first 3 seconds.
 3. End with a strong call to action (CTA) for subscribing.`;
 
-  if (window.parent) {
-    window.parent.postMessage({ type: 'AUTO_TRIGGER_PROMPT_SHORT', prompt: promptText }, '*');
+  window.postMessage({ type: 'AUTO_TRIGGER_PROMPT_SHORT', prompt: promptText }, '*');
+  if (window.parent !== window) {
+      window.parent.postMessage({ type: 'AUTO_TRIGGER_PROMPT_SHORT', prompt: promptText }, '*');
   }
 }
