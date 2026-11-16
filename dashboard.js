@@ -1,5 +1,6 @@
 // ==========================================
 // AGC.AI Dashboard & Chat JavaScript Logic
+// (Includes AI Message Copy Button & Story-Forward Auto-Splitter)
 // ==========================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -18,12 +19,37 @@ const loaderMessages = [
     "Almost ready..."
 ];
 
+// 📋 AI मैसेज के साथ 'Copy Script' बटन जोड़ने वाला अपडेटेड फंक्शन
 function appendMessage(text, sender) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
+    
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
-    msgDiv.innerText = text;
+    
+    // मुख्य टेक्स्ट डिव
+    const textSpan = document.createElement('div');
+    textSpan.innerText = text;
+    msgDiv.appendChild(textSpan);
+
+    // अगर मैसेज AI का है, तो उसके नीचे 'Copy Script' बटन जोड़ें
+    if (sender === 'ai') {
+        const copyBtn = document.createElement('button');
+        copyBtn.innerText = '📋 Copy Script';
+        copyBtn.className = 'copy-msg-btn';
+        
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.innerText = '✅ Copied!';
+                setTimeout(() => { copyBtn.innerText = '📋 Copy Script'; }, 2000);
+            }).catch(err => {
+                console.error('Copy failed', err);
+            });
+        };
+        
+        msgDiv.appendChild(copyBtn);
+    }
+
     chatMessages.appendChild(msgDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -308,29 +334,42 @@ if (sendChatBtn && chatInput && chatMessages) {
         if (loadingMsg.parentNode) loadingMsg.parentNode.removeChild(loadingMsg);
 
         // ==========================================
-        // 🕵️ Jaasoos Code & 48-Hour Temporary Storage Logic
+        // 🕵️ Jaasoos Code & Story-Forward Auto-Splitter Logic
         // ==========================================
         if (finalResponse) {
             appendMessage(finalResponse, 'ai');
 
             const isSplitterON = localStorage.getItem('agc_auto_split_active') === 'true';
 
+            // यदि कहानी जनरेट हुई है और स्प्लिटर ऑन है
             if (currentProcessPhase === 'story_generation' && isSplitterON) {
                 currentProcessPhase = 'scene_splitting'; 
                 
+                // 1️⃣ ठीक ऊपर जो ताज़ा स्क्रिप्ट जनरेट हुई है, उसे वेरिएबल में पकड़ लो
+                const generatedStory = finalResponse;
+
                 setTimeout(() => {
-                    const splitPrompt = `[AUTO_SCENE_SPLITTER]: आपने जो ऊपर कहानी जनरेट की है, उसे सीन-बाय-सीन (Scene 1, Scene 2) में तोड़ो। 
-हर सीन के लिए मुझे यह 3 चीज़ें स्पष्ट HINDI में चाहिए:
-1. Setting (सीन कहाँ का है)
-2. Character Action & Attire (हीरो क्या कर रहा है और क्या पहना है)
-3. Voiceover/Dialogue (सीन का डायलॉग)
-ध्यान रहे, पूरा आउटपुट सिर्फ HINDI भाषा में हो।`;
+                    // 2️⃣ उस ताज़ा स्टोरी को प्रॉम्प्ट के साथ जोड़कर भेजो ताकि एआई वही तोड़े
+                    const splitPrompt = `[AUTO_SCENE_SPLITTER]: ठीक इसके नीचे दी गई इस स्क्रिप्ट को एक प्रोफेशनल फिल्म डायरेक्टर की तरह सीन-बाय-सीन (Scene 1, Scene 2, Scene 3...) में अलग-अलग तोड़ो:
+
+---
+${generatedStory}
+---
+
+यह सबसे महत्वपूर्ण और सख्त नियम है, इसका पूरी तरह पालन करें:
+- **एक सीन में केवल एक ही सिंगल एक्शन (Single Action Only) होना चाहिए।** गलती से भी एक ही सीन या फोटो प्रॉम्प्ट में दो अलग-अलग घटनाएं या एक्शन (जैसे 'हंसना और अचानक जादू करना') बिल्कुल न आएँ। अगर एक्शन बड़ा है, तो उसे अलग-अलग सीन में बांट दो।
+- हर सीन के लिए मुझे यह 3 चीज़ें स्पष्ट HINDI में चाहिए:
+  1. Setting (सीन कहाँ का है / बैकग्राउंड का विवरण)
+  2. Character Action & Attire (किरदार का केवल और केवल एक सटीक एक्शन और उसने क्या पहना है)
+  3. Voiceover/Dialogue (सीन का डायलॉग या वॉयसओवर)
+ध्यान रहे, पूरा आउटपुट सिर्फ HINDI भाषा में हो और हर सीन पूरी तरह स्वतंत्र (Independent) हो ताकि हर सीन की अलग, साफ़ और परफेक्ट AI Image Generate की जा सके।`;
                     
                     chatInput.value = splitPrompt;
                     const sendBtn = document.getElementById('sendChatBtn');
                     if(sendBtn) sendBtn.click(); 
                 }, 3000); 
             } 
+            // जब सीन-बाय-सीन स्प्लिट होकर आ जाए, तब उसे Recent Scripts में सेव कर लो
             else if (currentProcessPhase === 'scene_splitting') {
                 currentProcessPhase = 'idle'; 
                 
@@ -347,7 +386,7 @@ if (sendChatBtn && chatInput && chatMessages) {
                 if(window.updateSidebarList) window.updateSidebarList();
                 
                 setTimeout(() => {
-                    appendMessage("✅ सीन-बाय-सीन डेटा 'Recent Scripts (48h)' में सेव कर लिया गया है।", 'ai');
+                    appendMessage("✅ सिंगल-एक्शन आधारित सीन-बाय-सीन डेटा 'Recent Scripts (48h)' में सफलतापर्वक सेव कर लिया गया है!", 'ai');
                 }, 1000);
             }
             else {
@@ -434,7 +473,6 @@ function loadAndCleanRecentProjects() {
     projects.forEach(proj => {
         const li = document.createElement('li');
         
-        // Data format clean show karne ke liye
         li.innerHTML = `<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; width: 100%;">📄 Script (${proj.data.time})</span>`;
         
         li.onclick = () => {

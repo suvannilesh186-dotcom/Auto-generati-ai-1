@@ -719,3 +719,24 @@ body.dashboard-body {
 #recentProjectsList::-webkit-scrollbar-thumb:hover {
     background: #58a6ff;
 }
+/* 📋 Copy Script Button Styling inside AI Messages */
+.copy-msg-btn {
+    margin-top: 8px;
+    background: #21262d;
+    color: #58a6ff;
+    border: 1px solid #30363d;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.copy-msg-btn:hover {
+    background: #30363d;
+    border-color: #58a6ff;
+    color: #ffffff;
+}
