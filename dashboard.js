@@ -20,44 +20,12 @@ const loaderMessages = [
 ];
 
 // 📋 AI मैसेज के साथ 'Copy Script' बटन जोड़ने वाला अपडेटेड फंक्शन
-function appendMessage(text, sender) {
+function appendMessage(text, sender, showCopyBtn = true) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
     
     const msgDiv = document.createElement('div');
-    msgDiv.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
-    
-    // मुख्य टेक्स्ट डिव
-    const textSpan = document.createElement('div');
-    textSpan.innerText = text;
-    msgDiv.appendChild(textSpan);
-
-    // अगर मैसेज AI का है, तो उसके नीचे 'Copy Script' बटन जोड़ें
-    if (sender === 'ai') {
-        const copyBtn = document.createElement('button');
-        copyBtn.innerText = '📋 Copy Script';
-        copyBtn.className = 'copy-msg-btn';
-        
-        copyBtn.onclick = () => {
-            navigator.clipboard.writeText(text).then(() => {
-                copyBtn.innerText = '✅ Copied!';
-                setTimeout(() => { copyBtn.innerText = '📋 Copy Script'; }, 2000);
-            }).catch(err => {
-                console.error('Copy failed', err);
-            });
-        };
-        
-        msgDiv.appendChild(copyBtn);
-    }
-
-    chatMessages.appendChild(msgDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-async function fetchYouTubeChannelData(accessToken) {
-    try {
-        const response = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true', {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
+    msgDiv.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;  // मुख्य टेक्स्ट डिव const textSpan = document.createElement('div'); textSpan.innerText = text; msgDiv.appendChild(textSpan);  // अगर मैसेज AI का है और showCopyBtn true है, तो उसके नीचे 'Copy Script' बटन जोड़ें if (sender === 'ai' && showCopyBtn) { const copyBtn = document.createElement('button'); copyBtn.innerText = '📋 Copy Script'; copyBtn.className = 'copy-msg-btn';  copyBtn.onclick = () => { navigator.clipboard.writeText(text).then(() => { copyBtn.innerText = '✅ Copied!'; setTimeout(() => { copyBtn.innerText = '📋 Copy Script'; }, 2000); }).catch(err => { console.error('Copy failed', err); }); };  msgDiv.appendChild(copyBtn); }  chatMessages.appendChild(msgDiv); chatMessages.scrollTop = chatMessages.scrollHeight; }  async function fetchYouTubeChannelData(accessToken) { try { const response = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true', { headers: { 'Authorization': `Bearer ${accessToken}` }
         });
         const data = await response.json();
         
@@ -85,42 +53,7 @@ async function fetchYouTubeChannelData(accessToken) {
                     subSpan.style.marginTop = '2px';
                     profileInfo.appendChild(subSpan);
                 }
-                subSpan.innerText = `Subscribers: ${subscriberCount}`;
-            }
-        }
-    } catch (error) {
-        console.error("YouTube API Error:", error);
-    }
-}
-
-try {
-    const firebaseConfig = {
-        apiKey: CONFIG.firebaseApiKey,
-        authDomain: CONFIG.authDomain,
-        projectId: CONFIG.projectId,
-        storageBucket: CONFIG.storageBucket,
-        messagingSenderId: CONFIG.messagingSenderId,
-        appId: CONFIG.appId,
-        measurementId: CONFIG.measurementId
-    };
-
-    const app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            const emailElem = document.getElementById('user-email');
-            const nameElem = document.getElementById('channel-name');
-            const logoElem = document.getElementById('channel-logo');
-
-            if (emailElem) emailElem.innerText = user.email || "Connected User";
-            if (nameElem && user.displayName) nameElem.innerText = user.displayName;
-            if (logoElem && user.photoURL) logoElem.src = user.photoURL;
-
-            const chatMessages = document.getElementById('chatMessages');
-            if (chatMessages && chatMessages.children.length === 0) {
-                const userName = user.displayName ? user.displayName.split(' ')[0] : 'Commander';
-                appendMessage(`Hi ${userName}! बताइए आज कौन सा ऑटोमेशन या कंटेंट तैयार करना है?`, 'ai');
+                subSpan.innerText = `Subscribers: ${subscriberCount}`; } } } catch (error) { console.error("YouTube API Error:", error); } }  try { const firebaseConfig = { apiKey: CONFIG.firebaseApiKey, authDomain: CONFIG.authDomain, projectId: CONFIG.projectId, storageBucket: CONFIG.storageBucket, messagingSenderId: CONFIG.messagingSenderId, appId: CONFIG.appId, measurementId: CONFIG.measurementId };  const app = initializeApp(firebaseConfig); auth = getAuth(app);  onAuthStateChanged(auth, (user) => { if (user) { const emailElem = document.getElementById('user-email'); const nameElem = document.getElementById('channel-name'); const logoElem = document.getElementById('channel-logo');  if (emailElem) emailElem.innerText = user.email \vert{}\vert{} "Connected User"; if (nameElem && user.displayName) nameElem.innerText = user.displayName; if (logoElem && user.photoURL) logoElem.src = user.photoURL;  const chatMessages = document.getElementById('chatMessages'); if (chatMessages && chatMessages.children.length === 0) { const userName = user.displayName ? user.displayName.split(' ')[0] : 'Commander'; appendMessage(`Hi ${userName}! बताइए आज कौन सा ऑटोमेशन या कंटेंट तैयार करना है?`, 'ai', false);
             }
 
             const token = localStorage.getItem('agc_access_token');
@@ -274,7 +207,31 @@ if (sendChatBtn && chatInput && chatMessages) {
 
         const loadingMsg = document.createElement('div');
         loadingMsg.className = 'ai-loader chat-inline-loader';
-        loadingMsg.innerHTML = `<span class="ai-loader__text" id="loader-text">Thinking...</span>`;
+        loadingMsg.innerHTML = `
+            <div class="ai-loader__main-composition">
+                <div class="ai-loader__orbits-container">
+                    <svg class="ai-loader__svg-ring outer-ring-svg" viewBox="0 0 36 36">
+                        <circle class="track-ring" cx="18" cy="18" r="16"></circle>
+                        <circle class="outer-arc" cx="18" cy="18" r="16"></circle>
+                    </svg>
+                    <svg class="ai-loader__svg-ring inner-ring-svg" viewBox="0 0 36 36">
+                        <circle class="inner-arc" cx="18" cy="18" r="11"></circle>
+                    </svg>
+                </div>
+                <div class="ai-loader__inner-disc"></div>
+                <div class="ai-loader__logo">
+                    <img src="logo.png" alt="AI" class="ai-logo-center" onerror="this.style.display='none'">
+                </div>
+            </div>
+            <div class="ai-loader__status-pill">
+                <span class="ai-loader__text" id="loader-text">Thinking...</span>
+                <div class="ai-loader__dots">
+                    <span class="ai-loader__dot ai-loader__dot--1"></span>
+                    <span class="ai-loader__dot ai-loader__dot--2"></span>
+                    <span class="ai-loader__dot ai-loader__dot--3"></span>
+                </div>
+            </div>
+        `;
         chatMessages.appendChild(loadingMsg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -359,142 +316,4 @@ ${generatedStory}
 यह सबसे महत्वपूर्ण और सख्त नियम है, इसका पूरी तरह पालन करें:
 - **एक सीन में केवल एक ही सिंगल एक्शन (Single Action Only) होना चाहिए।** गलती से भी एक ही सीन या फोटो प्रॉम्प्ट में दो अलग-अलग घटनाएं या एक्शन (जैसे 'हंसना और अचानक जादू करना') बिल्कुल न आएँ। अगर एक्शन बड़ा है, तो उसे अलग-अलग सीन में बांट दो।
 - हर सीन के लिए मुझे यह 3 चीज़ें स्पष्ट HINDI में चाहिए:
-  1. Setting (सीन कहाँ का है / बैकग्राउंड का विवरण)
-  2. Character Action & Attire (किरदार का केवल और केवल एक सटीक एक्शन और उसने क्या पहना है)
-  3. Voiceover/Dialogue (सीन का डायलॉग या वॉयसओवर)
-ध्यान रहे, पूरा आउटपुट सिर्फ HINDI भाषा में हो और हर सीन पूरी तरह स्वतंत्र (Independent) हो ताकि हर सीन की अलग, साफ़ और परफेक्ट AI Image Generate की जा सके।`;
-                    
-                    chatInput.value = splitPrompt;
-                    const sendBtn = document.getElementById('sendChatBtn');
-                    if(sendBtn) sendBtn.click(); 
-                }, 3000); 
-            } 
-            // जब सीन-बाय-सीन स्प्लिट होकर आ जाए, तब उसे Recent Scripts में सेव कर लो
-            else if (currentProcessPhase === 'scene_splitting') {
-                currentProcessPhase = 'idle'; 
-                
-                const timestamp = new Date().toLocaleString();
-                const projectData = {
-                    time: timestamp,
-                    script: finalResponse
-                };
-                
-                // LocalStorage mein save 
-                localStorage.setItem('agc_recent_project_' + Date.now(), JSON.stringify(projectData));
-                
-                // Sidebar list ko turant update karo
-                if(window.updateSidebarList) window.updateSidebarList();
-                
-                setTimeout(() => {
-                    appendMessage("✅ सिंगल-एक्शन आधारित सीन-बाय-सीन डेटा 'Recent Scripts (48h)' में सफलतापर्वक सेव कर लिया गया है!", 'ai');
-                }, 1000);
-            }
-            else {
-                currentProcessPhase = 'idle'; 
-            }
-
-        } else {
-            appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है।"}`, 'ai');
-            currentProcessPhase = 'idle';
-        }
-
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    };
-
-    sendChatBtn.addEventListener('click', handleSendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSendMessage();
-    });
-}
-
-const openSettingsBtn = document.getElementById('openMasterSettings');
-const settingsModal = document.getElementById('masterSettingsModal');
-const closeSettingsBtn = document.getElementById('closeModalBtn');
-
-if (openSettingsBtn && settingsModal) {
-    openSettingsBtn.addEventListener('click', () => { settingsModal.style.display = 'flex'; });
-}
-if (closeSettingsBtn && settingsModal) {
-    closeSettingsBtn.addEventListener('click', () => { settingsModal.style.display = 'none'; });
-}
-window.addEventListener('click', (e) => {
-    if (e.target === settingsModal) { settingsModal.style.display = 'none'; }
-});
-
-// ==========================================
-// Event Listener for Automation Triggers
-// ==========================================
-window.addEventListener('message', (event) => {
-    if (event.data && (event.data.type === 'AUTO_TRIGGER_PROMPT' || event.data.type === 'AUTO_TRIGGER_PROMPT_SHORT')) {
-        currentProcessPhase = 'story_generation'; 
-        chatInput.value = event.data.prompt;
-        const sendChatBtn = document.getElementById('sendChatBtn');
-        if (sendChatBtn) sendChatBtn.click();
-    }
-});
-
-// ==========================================
-// 🕒 Smart Temporary Chat Storage & Scrollable List Logic
-// ==========================================
-function loadAndCleanRecentProjects() {
-    const recentList = document.getElementById('recentProjectsList');
-    if (!recentList) return;
-    recentList.innerHTML = ''; 
-
-    const now = Date.now();
-    const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000; 
-    let projects = [];
-
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('agc_recent_project_')) {
-            const timestampStr = key.replace('agc_recent_project_', '');
-            const projectTime = parseInt(timestampStr, 10);
-            
-            if (now - projectTime > FORTY_EIGHT_HOURS) {
-                localStorage.removeItem(key);
-                i--; 
-            } else {
-                try {
-                    const data = JSON.parse(localStorage.getItem(key));
-                    projects.push({ key: key, time: projectTime, data: data });
-                } catch(e) {}
-            }
-        }
-    }
-
-    projects.sort((a, b) => b.time - a.time);
-
-    if (projects.length === 0) {
-        recentList.innerHTML = '<li style="padding: 8px 12px; color: #666; font-size: 11px; text-align: center;">No scripts yet</li>';
-        return;
-    }
-
-    projects.forEach(proj => {
-        const li = document.createElement('li');
-        
-        li.innerHTML = `<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; width: 100%;">📄 Script (${proj.data.time})</span>`;
-        
-        li.onclick = () => {
-            const chatMessages = document.getElementById('chatMessages');
-            if(chatMessages) {
-                chatMessages.innerHTML = ''; 
-                const msgDiv = document.createElement('div');
-                msgDiv.className = 'message ai-message';
-                msgDiv.innerText = proj.data.script;
-                chatMessages.appendChild(msgDiv);
-                
-                const sidebar = document.getElementById('sidebar');
-                if (sidebar) sidebar.classList.remove('active');
-            }
-        };
-        
-        recentList.appendChild(li);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    loadAndCleanRecentProjects();
-});
-
-window.updateSidebarList = loadAndCleanRecentProjects;
+  1. Setting (सी

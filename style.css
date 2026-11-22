@@ -205,7 +205,7 @@ body.dashboard-body {
     word-break: break-all;
 }
 
-/* Master Setting Button Styles (Analytics के जैसी बिल्कुल परफ़ेक्ट स्टाइलिंग) */
+/* Master Setting Button Styles */
 .master-setting-btn-box {
     cursor: pointer;
     background: #161b22;
@@ -719,6 +719,7 @@ body.dashboard-body {
 #recentProjectsList::-webkit-scrollbar-thumb:hover {
     background: #58a6ff;
 }
+
 /* 📋 Copy Script Button Styling inside AI Messages */
 .copy-msg-btn {
     margin-top: 8px;
