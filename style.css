@@ -205,7 +205,7 @@ body.dashboard-body {
     word-break: break-all;
 }
 
-/* Master Setting Button Styles */
+/* Master Setting Button Styles (Analytics के जैसी बिल्कुल परफ़ेक्ट स्टाइलिंग) */
 .master-setting-btn-box {
     cursor: pointer;
     background: #161b22;
@@ -281,6 +281,71 @@ body.dashboard-body {
     font-size: 10px;
     color: #8b949e;
     margin-top: 2px;
+}
+
+/* Recent Scripts Box Styling */
+.sidebar-section {
+    margin-top: 10px;
+    border-top: 1px solid #21262d;
+    padding-top: 10px;
+}
+
+.sidebar-section h4 {
+    color: #58a6ff;
+    margin-left: 6px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#recentProjectsList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 110px;
+    overflow-y: auto;
+    background: #090d12;
+    border-radius: 8px;
+    border: 1px solid #21262d;
+}
+
+#recentProjectsList li {
+    padding: 8px 10px;
+    border-bottom: 1px solid #161b22;
+    cursor: pointer;
+    font-size: 11px;
+    color: #c9d1d9;
+    transition: background 0.2s, color 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#recentProjectsList li:last-child {
+    border-bottom: none;
+}
+
+#recentProjectsList li:hover {
+    background: #161b22;
+    color: #58a6ff;
+}
+
+#recentProjectsList::-webkit-scrollbar {
+    width: 4px;
+}
+
+#recentProjectsList::-webkit-scrollbar-track {
+    background: #090d12;
+}
+
+#recentProjectsList::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 4px;
+}
+
+#recentProjectsList::-webkit-scrollbar-thumb:hover {
+    background: #58a6ff;
 }
 
 .sidebar-bottom {
@@ -382,6 +447,28 @@ body.dashboard-body {
     background: #1f6feb;
     color: #ffffff;
     align-self: flex-end;
+}
+
+/* Copy Script Button Styling inside AI Messages */
+.copy-msg-btn {
+    margin-top: 8px;
+    background: #21262d;
+    color: #58a6ff;
+    border: 1px solid #30363d;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.copy-msg-btn:hover {
+    background: #30363d;
+    border-color: #58a6ff;
+    color: #ffffff;
 }
 
 .chat-input-container {
@@ -642,102 +729,13 @@ body.dashboard-body {
     letter-spacing: 0.2px;
 }
 
-/* 🛠️ Fix for Desktop Site Mode on Mobile: Sidebar stays hidden by default, controlled strictly by Hamburger Button */
-.sidebar {
-    position: absolute !important;
-    transform: translateX(-100%) !important;
-    transition: transform 0.3s ease-in-out !important;
-    z-index: 99 !important;
-}
-
-.sidebar.active {
-    transform: translateX(0) !important;
-}
-
-.menu-toggle-btn {
-    display: flex !important;
-}
-
-/* 🕒 Recent Scripts Box Styling (Added for 48h Temporary Storage) */
-.sidebar-section {
-    margin-top: 15px;
-    border-top: 1px solid #21262d;
-    padding-top: 12px;
-}
-
-.sidebar-section h4 {
-    color: #58a6ff;
-    margin-left: 10px;
-    margin-bottom: 8px;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-#recentProjectsList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 110px;
-    overflow-y: auto;
-    background: #090d12;
-    border-radius: 8px;
-    border: 1px solid #21262d;
-}
-
-#recentProjectsList li {
-    padding: 8px 10px;
-    border-bottom: 1px solid #161b22;
-    cursor: pointer;
-    font-size: 11px;
-    color: #c9d1d9;
-    transition: background 0.2s, color 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-#recentProjectsList li:hover {
-    background: #161b22;
-    color: #58a6ff;
-}
-
-/* Custom Scrollbar for Recent Scripts List */
-#recentProjectsList::-webkit-scrollbar {
-    width: 4px;
-}
-
-#recentProjectsList::-webkit-scrollbar-track {
-    background: #090d12;
-}
-
-#recentProjectsList::-webkit-scrollbar-thumb {
-    background: #30363d;
-    border-radius: 4px;
-}
-
-#recentProjectsList::-webkit-scrollbar-thumb:hover {
-    background: #58a6ff;
-}
-
-/* 📋 Copy Script Button Styling inside AI Messages */
-.copy-msg-btn {
-    margin-top: 8px;
-    background: #21262d;
-    color: #58a6ff;
-    border: 1px solid #30363d;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    transition: background 0.2s, border-color 0.2s;
-}
-
-.copy-msg-btn:hover {
-    background: #30363d;
-    border-color: #58a6ff;
-    color: #ffffff;
+/* Desktop View Adjustments */
+@media (min-width: 768px) {
+    .sidebar {
+        position: relative;
+        transform: translateX(0);
+    }
+    .menu-toggle-btn {
+        display: none;
+    }
 }
