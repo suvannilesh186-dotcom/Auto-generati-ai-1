@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AGC.AI - GPU Lab 1</title>
-    <link rel="stylesheet" href="lab1.css" />
+    <link rel="stylesheet" href="lab1.css?v=4" />
 </head>
 <body class="lab1-body">
     <div id="lab1Canvas" class="lab1-canvas">
@@ -14,19 +14,28 @@
             <span id="lab1SessionTag" class="lab1-session-tag">48h Cache</span>
         </header>
 
-        <!-- Section 1: Character Reference Photos -->
+        <!-- 1. Character Reference Photos -->
         <section class="lab1-section" id="charRefSection">
             <div class="section-head">
-                <h2>🎭 Character Reference Studio</h2>
+                <h2>1. 🎭 Character Reference Studio</h2>
                 <button id="addCharRowBtn" class="lab1-btn small" type="button">+ Add Character</button>
             </div>
             <div id="charRefRowsContainer" class="rows-container"></div>
         </section>
 
-        <!-- Section 2: Scene Video Prompts & Renders (Scroll Down) -->
+        <!-- 2. Scene Photos -->
+        <section class="lab1-section" id="scenePhotoSection">
+            <div class="section-head">
+                <h2>2. 🖼️ Scene Photo Studio</h2>
+                <button id="addPhotoRowBtn" class="lab1-btn small" type="button">+ Add Scene Photo</button>
+            </div>
+            <div id="scenePhotoRowsContainer" class="rows-container"></div>
+        </section>
+
+        <!-- 3. Scene Video Prompts & Renders -->
         <section class="lab1-section" id="sceneVideoSection">
             <div class="section-head">
-                <h2>🎬 Scene Video Studio</h2>
+                <h2>3. 🎬 Scene Video Studio</h2>
                 <button id="addSceneRowBtn" class="lab1-btn small" type="button">+ Add Scene Step</button>
             </div>
             <div id="sceneVideoRowsContainer" class="rows-container"></div>
@@ -39,6 +48,6 @@
         <img id="zoomModalImage" class="zoom-modal-image" alt="Full HD Preview" />
     </div>
 
-    <script type="module" src="lab1.js"></script>
+    <script type="module" src="lab1.js?v=4"></script>
 </body>
 </html>

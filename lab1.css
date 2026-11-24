@@ -1,3 +1,7 @@
+/* ==========================================
+   AGC.AI - GPU Lab 1 Stylesheet
+   ========================================== */
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -5,53 +9,54 @@
 }
 
 body.lab1-body {
-    background-color: #07090e;
-    color: #e6edf3;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #070b12;
+    color: #f1f5f9;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     min-height: 100vh;
-    width: 100%;
-    overflow-x: hidden;
+    padding: 14px;
 }
 
 .lab1-canvas {
-    max-width: 1080px;
+    max-width: 960px;
     margin: 0 auto;
-    padding: 14px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 18px;
 }
 
+/* Top Bar */
 .lab1-topbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    background: #0d1117;
-    border: 1px solid #21262d;
+    padding: 12px 16px;
+    background: #0f1624;
+    border: 1px solid #1e293b;
     border-radius: 12px;
-    padding: 10px 14px;
 }
 
 .lab1-title {
     font-size: 16px;
     font-weight: 800;
     color: #58a6ff;
-    letter-spacing: 0.6px;
+    letter-spacing: 0.4px;
 }
 
 .lab1-session-tag {
     font-size: 11px;
-    color: #8b949e;
-    background: #161b22;
-    border: 1px solid #30363d;
-    padding: 4px 8px;
-    border-radius: 6px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.14);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
 }
 
+/* Sections (1. Character Ref, 2. Scene Photo, 3. Scene Video) */
 .lab1-section {
-    background: #0d1117;
-    border: 1px solid #21262d;
+    background: #0c121d;
+    border: 1px solid #1e293b;
     border-radius: 14px;
     padding: 14px;
     display: flex;
@@ -64,29 +69,32 @@ body.lab1-body {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #1a2436;
 }
 
 .section-head h2 {
-    font-size: 16px;
-    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    color: #f8fafc;
 }
 
 .rows-container {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
 }
 
-/* Two-sided row: Left = Prompt + GO/Reload, Right = Output Box */
+/* Individual Row (Prompt Left + Output Right) */
 .studio-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.25fr 1fr;
     gap: 12px;
-    background: #121722;
-    border: 1px solid #263042;
+    background: #101827;
+    border: 1px solid #243249;
     border-radius: 12px;
     padding: 12px;
-    align-items: stretch;
 }
 
 @media (max-width: 720px) {
@@ -102,39 +110,41 @@ body.lab1-body {
 }
 
 .row-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: #93c5fd;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #93c5fd;
 }
 
 .ref-badge {
-    font-size: 11px;
-    color: #34d399;
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.35);
-    padding: 2px 8px;
+    font-size: 10px;
+    padding: 3px 8px;
     border-radius: 999px;
+    background: #172554;
+    color: #93c5fd;
+    border: 1px solid #2563eb;
+    white-space: nowrap;
 }
 
 .studio-textarea {
     width: 100%;
-    min-height: 92px;
-    background: #090d14;
+    min-height: 110px;
+    resize: vertical;
+    background: #080d17;
     color: #f8fafc;
-    border: 1px solid #30363d;
+    border: 1px solid #26354d;
     border-radius: 8px;
     padding: 10px;
     font-size: 13px;
     line-height: 1.45;
-    resize: vertical;
     outline: none;
 }
 
 .studio-textarea:focus {
-    border-color: #58a6ff;
+    border-color: #3b82f6;
 }
 
 .action-bar {
@@ -144,94 +154,55 @@ body.lab1-body {
     flex-wrap: wrap;
 }
 
-.lab1-btn {
-    border: none;
-    border-radius: 8px;
-    padding: 8px 14px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: opacity 0.15s, transform 0.12s;
-}
-
-.lab1-btn:active {
-    transform: scale(0.97);
-}
-
-.lab1-btn.go {
-    background: #238636;
-    color: #ffffff;
-}
-
-.lab1-btn.reload {
-    background: #d97706;
-    color: #ffffff;
-}
-
-.lab1-btn.secondary {
-    background: #21262d;
-    color: #e6edf3;
-    border: 1px solid #30363d;
-}
-
-.lab1-btn.small {
-    padding: 6px 12px;
-    background: #1f6feb;
-    color: #ffffff;
-}
-
 .retry-countdown {
     font-size: 11px;
     color: #fbbf24;
     font-weight: 600;
 }
 
+/* Output Side */
 .output-side {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
     gap: 8px;
-    background: #090d14;
-    border: 1px solid #263042;
-    border-radius: 10px;
-    padding: 10px;
 }
 
 .output-frame {
-    min-height: 130px;
-    border-radius: 8px;
-    background: #0d1117;
-    border: 1px dashed #30363d;
+    width: 100%;
+    min-height: 150px;
+    background: #080d17;
+    border: 1px dashed #293852;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    padding: 10px;
-    position: relative;
     overflow: hidden;
+    padding: 8px;
+}
+
+.output-image {
+    max-width: 100%;
+    max-height: 240px;
+    border-radius: 8px;
+    object-fit: contain;
+    cursor: zoom-in;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .output-placeholder {
     font-size: 12px;
-    color: #8b949e;
-    line-height: 1.45;
+    color: #64748b;
+    text-align: center;
+    padding: 12px;
 }
 
 .output-error {
     font-size: 12px;
     color: #f87171;
-    line-height: 1.45;
-}
-
-.output-image {
-    max-width: 100%;
-    max-height: 220px;
-    border-radius: 6px;
-    object-fit: contain;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-    cursor: zoom-in;
+    text-align: center;
+    padding: 10px;
+    font-weight: 600;
 }
 
 .output-actions {
@@ -240,36 +211,71 @@ body.lab1-body {
     flex-wrap: wrap;
 }
 
-/* Press & Hold Full-HD Zoom Modal */
+/* Buttons */
+.lab1-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 13px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #ffffff;
+    background: #2563eb;
+    transition: opacity 0.15s ease;
+}
+
+.lab1-btn:hover {
+    opacity: 0.92;
+}
+
+.lab1-btn.small {
+    padding: 6px 11px;
+    font-size: 11px;
+}
+
+.lab1-btn.secondary {
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+}
+
+.lab1-btn.go {
+    background: #16a34a;
+}
+
+.lab1-btn.reload {
+    background: #d97706;
+}
+
+/* Full-HD Zoom Modal */
 .zoom-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.94);
-    z-index: 9999;
-    display: flex;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 99999;
     align-items: center;
     justify-content: center;
     padding: 16px;
 }
 
 .zoom-modal-image {
-    max-width: 98vw;
-    max-height: 94vh;
-    object-fit: contain;
+    max-width: 96%;
+    max-height: 90vh;
     border-radius: 10px;
-    box-shadow: 0 0 40px rgba(88, 166, 255, 0.35);
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.8);
 }
 
 .zoom-close-btn {
     position: fixed;
     top: 16px;
-    right: 16px;
+    right: 18px;
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    border: 1px solid #30363d;
-    background: #161b22;
-    color: #ffffff;
+    border: 1px solid #475569;
+    background: #1e293b;
+    color: #fff;
     font-size: 16px;
+    font-weight: 700;
     cursor: pointer;
 }

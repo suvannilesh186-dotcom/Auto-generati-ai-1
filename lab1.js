@@ -47,19 +47,24 @@ function loadLabDataForSession(currentSessionId) {
     }
 
     const latestEntry = Object.values(map)
-        .filter((e) => e && e.data && ((e.data.characters && e.data.characters.length) || (e.data.scenes && e.data.scenes.length)))
+        .filter((e) => e && e.data && (
+            (e.data.characters && e.data.characters.length) ||
+            (e.data.photos && e.data.photos.length) ||
+            (e.data.scenes && e.data.scenes.length)
+        ))
         .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
 
     if (latestEntry && latestEntry.data) {
         return latestEntry.data;
     }
 
-    return { characters: [], scenes: [] };
+    return { characters: [], photos: [], scenes: [] };
 }
 
 const sessionId = getActiveOrLatestSessionId();
 let labData = loadLabDataForSession(sessionId);
 if (!Array.isArray(labData.characters)) labData.characters = [];
+if (!Array.isArray(labData.photos)) labData.photos = [];
 if (!Array.isArray(labData.scenes)) labData.scenes = [];
 
 function persistLabData() {
@@ -145,6 +150,18 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '') {
 
 function syncReferenceImagesToScenes() {
     const availableRefs = labData.characters.map((c) => c.imageUrl).filter(Boolean);
+
+    labData.photos.forEach((ph, idx) => {
+        if (availableRefs.length > 0) {
+            const pickIdx = typeof ph.refIndex === 'number' && ph.refIndex < availableRefs.length
+                ? ph.refIndex
+                : idx % availableRefs.length;
+            ph.activeRefUrl = availableRefs[pickIdx];
+        } else {
+            ph.activeRefUrl = '';
+        }
+    });
+
     labData.scenes.forEach((sc, idx) => {
         if (availableRefs.length > 0) {
             const pickIdx = typeof sc.refIndex === 'number' && sc.refIndex < availableRefs.length
@@ -171,7 +188,7 @@ function createStudioRow(item, kind, onUpdate) {
     titleSpan.textContent = item.label;
     labelRow.appendChild(titleSpan);
 
-    if (kind === 'scene') {
+    if (kind === 'photo' || kind === 'scene') {
         const refBadge = document.createElement('span');
         refBadge.className = 'ref-badge';
         refBadge.textContent = item.activeRefUrl ? 'Ref Photo Linked ✓' : 'Waiting for Ref Photo';
@@ -180,9 +197,10 @@ function createStudioRow(item, kind, onUpdate) {
 
     const textarea = document.createElement('textarea');
     textarea.className = 'studio-textarea';
-    textarea.placeholder = kind === 'char'
-        ? 'Character Reference Prompt यहाँ ऑटो पेस्ट होगा...'
-        : 'Scene Video Prompt यहाँ ऑटो पेस्ट होगा...';
+    textarea.placeholder =
+        kind === 'char' ? 'Character Reference Prompt यहाँ ऑटो पेस्ट होगा...' :
+        kind === 'photo' ? 'Scene Photo Prompt यहाँ ऑटो पेस्ट होगा...' :
+        'Scene Video Prompt यहाँ ऑटो पेस्ट होगा...';
     textarea.value = item.prompt || '';
 
     textarea.addEventListener('input', () => {
@@ -261,9 +279,10 @@ function createStudioRow(item, kind, onUpdate) {
         } else {
             const p = document.createElement('div');
             p.className = 'output-placeholder';
-            p.textContent = kind === 'char'
-                ? 'GO दबाएं — रेफरेंस फोटो यहाँ आएगा।'
-                : 'रेफरेंस फोटो व प्रॉम्प्ट तैयार — GO दबाएं।';
+            p.textContent =
+                kind === 'char' ? 'GO दबाएं — रेफरेंस फोटो यहाँ आएगा।' :
+                kind === 'photo' ? 'रेफरेंस फोटो व सीन प्रॉम्प्ट तैयार — GO दबाएं।' :
+                'रेफरेंस फोटो व वीडियो प्रॉम्प्ट तैयार — GO दबाएं।';
             frame.appendChild(p);
         }
     }
@@ -308,9 +327,14 @@ function createStudioRow(item, kind, onUpdate) {
         paintOutput();
 
         try {
+            const renderKind =
+                kind === 'char' ? 'character_reference' :
+                kind === 'photo' ? 'scene_photo' :
+                'scene_video_step';
+
             const outUrl = await callGpuRenderEndpoint(
                 promptVal,
-                kind === 'char' ? 'character_reference' : 'scene_video_step',
+                renderKind,
                 item.activeRefUrl || ''
             );
             item.imageUrl = outUrl;
@@ -361,6 +385,7 @@ function renderAllSections() {
     syncReferenceImagesToScenes();
 
     const charContainer = document.getElementById('charRefRowsContainer');
+    const photoContainer = document.getElementById('scenePhotoRowsContainer');
     const sceneContainer = document.getElementById('sceneVideoRowsContainer');
 
     if (charContainer) {
@@ -368,11 +393,25 @@ function renderAllSections() {
         if (!labData.characters.length) {
             const empty = document.createElement('div');
             empty.className = 'output-placeholder';
-            empty.textContent = 'ऑटोमेशन से कैरेक्टर प्रॉम्प्ट्स आते ही यहाँ बॉक्स अपने आप बन जाएंगे।';
+            empty.textContent = 'कैरेक्टर रेफरेंस प्रॉम्प्ट आते ही यहाँ बॉक्स अपने आप बन जाएंगे।';
             charContainer.appendChild(empty);
         } else {
             labData.characters.forEach((charItem) => {
                 charContainer.appendChild(createStudioRow(charItem, 'char', renderAllSections));
+            });
+        }
+    }
+
+    if (photoContainer) {
+        photoContainer.innerHTML = '';
+        if (!labData.photos.length) {
+            const empty = document.createElement('div');
+            empty.className = 'output-placeholder';
+            empty.textContent = 'सीन फ़ोटो प्रॉम्प्ट आते ही यहाँ फ़ोटो बॉक्स अपने आप बन जाएंगे।';
+            photoContainer.appendChild(empty);
+        } else {
+            labData.photos.forEach((photoItem) => {
+                photoContainer.appendChild(createStudioRow(photoItem, 'photo', renderAllSections));
             });
         }
     }
@@ -382,7 +421,7 @@ function renderAllSections() {
         if (!labData.scenes.length) {
             const empty = document.createElement('div');
             empty.className = 'output-placeholder';
-            empty.textContent = 'ऑटोमेशन से वीडियो स्टेप्स आते ही यहाँ बॉक्स व रेफरेंस फोटो अपने आप जुड़ जाएंगे।';
+            empty.textContent = 'वीडियो सेक्शन अभी खाली है (ताकि खिचड़ी न बने)।';
             sceneContainer.appendChild(empty);
         } else {
             labData.scenes.forEach((sceneItem) => {
@@ -401,6 +440,21 @@ document.getElementById('addCharRowBtn')?.addEventListener('click', () => {
     labData.characters.push({
         id: `char_${Date.now()}_${nextNum}`,
         label: `Character ${nextNum}`,
+        prompt: '',
+        imageUrl: '',
+        status: 'idle',
+        errorMsg: ''
+    });
+    persistLabData();
+    renderAllSections();
+});
+
+document.getElementById('addPhotoRowBtn')?.addEventListener('click', () => {
+    const nextNum = labData.photos.length + 1;
+    labData.photos.push({
+        id: `scene_photo_${Date.now()}_${nextNum}`,
+        label: `Scene Photo ${nextNum}`,
+        refIndex: nextNum - 1,
         prompt: '',
         imageUrl: '',
         status: 'idle',
