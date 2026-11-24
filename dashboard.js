@@ -26,6 +26,9 @@ const loaderMessages = [
     "Almost ready..."
 ];
 
+// ==========================================
+// 💾 48h Full Chat Saver & Sidebar List
+// ==========================================
 function getFullChatHistoryMap() {
     try {
         const raw = localStorage.getItem(FULL_CHAT_ARCHIVE_KEY);
@@ -40,6 +43,19 @@ function getFullChatHistoryMap() {
             }
         });
 
+        // Purane 48h se zyada purane agc_recent_project_ keys bhi saaf karein
+        Object.keys(localStorage).forEach((k) => {
+            if (k.startsWith('agc_recent_project_')) {
+                try {
+                    const p = JSON.parse(localStorage.getItem(k) || '{}');
+                    const ts = p.updatedAt || Number(k.replace('agc_recent_project_', '').replace('session_', '')) || 0;
+                    if (ts && (now - ts) > FORTY_EIGHT_HOURS_MS) {
+                        localStorage.removeItem(k);
+                    }
+                } catch (_) {}
+            }
+        });
+
         localStorage.setItem(FULL_CHAT_ARCHIVE_KEY, JSON.stringify(cleaned));
         return cleaned;
     } catch (e) {
@@ -47,6 +63,73 @@ function getFullChatHistoryMap() {
         return {};
     }
 }
+
+function renderSavedSessionIntoChat(sessionObj) {
+    const chatBox = document.getElementById('chatMessages');
+    if (!chatBox || !sessionObj || !Array.isArray(sessionObj.messages)) return;
+
+    activeSessionId = sessionObj.sessionId || ('session_' + Date.now());
+    currentSessionMessages = [...sessionObj.messages];
+    chatBox.innerHTML = '';
+
+    sessionObj.messages.forEach((m) => {
+        if (!m || !m.text) return;
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${m.sender === 'user' ? 'user-message' : 'ai-message'}`;
+
+        const textSpan = document.createElement('div');
+        textSpan.innerText = m.text;
+        msgDiv.appendChild(textSpan);
+
+        if (m.sender === 'ai') {
+            const copyBtn = document.createElement('button');
+            copyBtn.innerText = '📋 Copy Script';
+            copyBtn.className = 'copy-msg-btn';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(m.text).then(() => {
+                    copyBtn.innerText = '✅ Copied!';
+                    setTimeout(() => { copyBtn.innerText = '📋 Copy Script'; }, 2000);
+                });
+            };
+            msgDiv.appendChild(copyBtn);
+        }
+
+        chatBox.appendChild(msgDiv);
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+    const sb = document.getElementById('sidebar');
+    if (sb) sb.classList.remove('active');
+}
+
+function updateSidebarList() {
+    const listEl = document.getElementById('recentProjectsList');
+    if (!listEl) return;
+
+    const historyMap = getFullChatHistoryMap();
+    const sessions = Object.values(historyMap).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    listEl.innerHTML = '';
+    if (!sessions.length) {
+        const emptyLi = document.createElement('li');
+        emptyLi.innerText = 'कोई सेव चैट नहीं (48h)';
+        emptyLi.style.color = '#8b949e';
+        emptyLi.style.cursor = 'default';
+        listEl.appendChild(emptyLi);
+        return;
+    }
+
+    sessions.forEach((sess) => {
+        const firstUserMsg = (sess.messages || []).find((m) => m.sender === 'user');
+        const preview = firstUserMsg ? firstUserMsg.text.replace(/\s+/g, ' ').slice(0, 28) : 'Saved Chat';
+        const li = document.createElement('li');
+        li.innerText = `${sess.timeLabel || ''} • ${preview}`;
+        li.title = sess.fullTranscript || preview;
+        li.addEventListener('click', () => renderSavedSessionIntoChat(sess));
+        listEl.appendChild(li);
+    });
+}
+window.updateSidebarList = updateSidebarList;
 
 function saveFullChatTurn(sender, text, phaseTag = '') {
     if (!text) return;
@@ -63,171 +146,37 @@ function saveFullChatTurn(sender, text, phaseTag = '') {
         .map((m, idx) => `[#${idx + 1} | ${m.sender.toUpperCase()} | ${m.phase}]\n${m.text}`)
         .join('\n\n------------------------------\n\n');
 
-    historyMap[activeSessionId] = {
+    const nowTs = Date.now();
+    const sessionRecord = {
         ...existing,
         sessionId: activeSessionId,
-        updatedAt: Date.now(),
-        timeLabel: new Date().toLocaleString(),
+        updatedAt: nowTs,
+        timeLabel: existing.timeLabel || new Date().toLocaleString(),
         messages: currentSessionMessages,
         fullTranscript: transcript
     };
+
+    historyMap[activeSessionId] = sessionRecord;
 
     try {
         localStorage.setItem(FULL_CHAT_ARCHIVE_KEY, JSON.stringify(historyMap));
         localStorage.setItem('agc_recent_project_' + activeSessionId, JSON.stringify({
             sessionId: activeSessionId,
-            time: new Date().toLocaleString(),
+            updatedAt: nowTs,
+            time: sessionRecord.timeLabel,
             script: latestSplitScenesText || text,
             fullChat: transcript,
             messages: currentSessionMessages
         }));
-        if (window.updateSidebarList) window.updateSidebarList();
+        updateSidebarList();
     } catch (e) {
         console.error('48h chat save error:', e);
     }
 }
 
-function ensurePromptsNewTab() {
-    const chatMessages = document.getElementById('chatMessages');
-    if (!chatMessages || !chatMessages.parentElement) return null;
-
-    let tabBar = document.getElementById('agcMainWorkspaceTabs');
-    let promptsTabPanel = document.getElementById('agcPromptsNewTabPanel');
-
-    if (!tabBar) {
-        tabBar = document.createElement('div');
-        tabBar.id = 'agcMainWorkspaceTabs';
-        tabBar.style.cssText = 'display:flex;gap:8px;padding:8px 12px;background:#11131a;border-bottom:1px solid #262b3d;align-items:center;';
-
-        const chatTabBtn = document.createElement('button');
-        chatTabBtn.id = 'tabBtnChatWorkspace';
-        chatTabBtn.type = 'button';
-        chatTabBtn.innerText = '💬 Story & Scene Chat';
-        chatTabBtn.style.cssText = 'padding:7px 14px;border-radius:8px;border:1px solid #3b82f6;background:#1d4ed8;color:#fff;font-size:12px;font-weight:600;cursor:pointer;';
-
-        const promptsTabBtn = document.createElement('button');
-        promptsTabBtn.id = 'tabBtnPromptsNewTab';
-        promptsTabBtn.type = 'button';
-        promptsTabBtn.innerText = '🎬 Character Ref & Video Prompts';
-        promptsTabBtn.style.cssText = 'padding:7px 14px;border-radius:8px;border:1px solid #333b4f;background:#1a1f2e;color:#cbd5e1;font-size:12px;font-weight:600;cursor:pointer;';
-
-        const switchToChat = () => {
-            chatMessages.style.display = '';
-            if (promptsTabPanel) promptsTabPanel.style.display = 'none';
-            chatTabBtn.style.background = '#1d4ed8';
-            chatTabBtn.style.borderColor = '#3b82f6';
-            chatTabBtn.style.color = '#fff';
-            promptsTabBtn.style.background = '#1a1f2e';
-            promptsTabBtn.style.borderColor = '#333b4f';
-            promptsTabBtn.style.color = '#cbd5e1';
-        };
-
-        const switchToPromptsTab = () => {
-            chatMessages.style.display = 'none';
-            if (promptsTabPanel) promptsTabPanel.style.display = 'block';
-            promptsTabBtn.style.background = '#059669';
-            promptsTabBtn.style.borderColor = '#10b981';
-            promptsTabBtn.style.color = '#fff';
-            chatTabBtn.style.background = '#1a1f2e';
-            chatTabBtn.style.borderColor = '#333b4f';
-            chatTabBtn.style.color = '#cbd5e1';
-        };
-
-        chatTabBtn.addEventListener('click', switchToChat);
-        promptsTabBtn.addEventListener('click', switchToPromptsTab);
-
-        tabBar.appendChild(chatTabBtn);
-        tabBar.appendChild(promptsTabBtn);
-        chatMessages.parentElement.insertBefore(tabBar, chatMessages);
-    }
-
-    if (!promptsTabPanel) {
-        promptsTabPanel = document.createElement('div');
-        promptsTabPanel.id = 'agcPromptsNewTabPanel';
-        promptsTabPanel.style.cssText = 'display:none;flex:1;overflow-y:auto;padding:14px;background:#0d1017;color:#f1f5f9;';
-        promptsTabPanel.innerHTML = `
-            <div id="agcCharRefPromptList" style="margin-bottom:20px;"></div>
-            <div id="agcSceneVideoPromptList"></div>
-        `;
-        chatMessages.parentElement.insertBefore(promptsTabPanel, chatMessages.nextSibling);
-    }
-
-    return {
-        promptsTabPanel,
-        charRefList: document.getElementById('agcCharRefPromptList'),
-        videoPromptList: document.getElementById('agcSceneVideoPromptList'),
-        openPromptsTab: () => {
-            const btn = document.getElementById('tabBtnPromptsNewTab');
-            if (btn) btn.click();
-        }
-    };
-}
-
-function createPromptCardWithCopy(titleText, bodyText, badgeColor = '#38bdf8') {
-    const card = document.createElement('div');
-    card.style.cssText = 'background:#151a24;border:1px solid #262f42;border-radius:10px;padding:12px;margin-bottom:12px;';
-
-    const header = document.createElement('div');
-    header.style.cssText = `font-size:12px;font-weight:700;color:${badgeColor};margin-bottom:8px;`;
-    header.innerText = titleText;
-
-    const pre = document.createElement('div');
-    pre.style.cssText = 'white-space:pre-wrap;font-size:13px;line-height:1.5;color:#e2e8f0;margin-bottom:10px;';
-    pre.innerText = bodyText;
-
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.className = 'copy-msg-btn single-prompt-copy-btn';
-    copyBtn.innerText = '📋 Copy Prompt';
-    copyBtn.style.cssText = 'padding:6px 12px;border-radius:6px;border:1px solid #3b82f6;background:#1e293b;color:#fff;font-size:12px;cursor:pointer;';
-
-    copyBtn.onclick = () => {
-        navigator.clipboard.writeText(bodyText).then(() => {
-            copyBtn.innerText = '✅ Copied!';
-            setTimeout(() => { copyBtn.innerText = '📋 Copy Prompt'; }, 2000);
-        });
-    };
-
-    card.appendChild(header);
-    card.appendChild(pre);
-    card.appendChild(copyBtn);
-    return card;
-}
-
-function splitIntoPromptBlocks(rawText) {
-    const cleaned = (rawText || '').trim();
-    if (!cleaned) return [];
-    const blocks = cleaned
-        .split(/\n{2,}(?=(?:#+\s*|\*\*|\[?(?:CHARACTER|HERO|VILLAIN|SUPPORTING|ANIMAL|SCENE|SHOT|PROMPT|प्रॉम्प्ट|सीन|किरदार)\b|\d+[\.\)]))/i)
-        .map((b) => b.trim())
-        .filter(Boolean);
-    return blocks.length ? blocks : [cleaned];
-}
-
-function renderPromptsIntoNewTab(sectionType, rawContent) {
-    const ui = ensurePromptsNewTab();
-    if (!ui) return;
-
-    const blocks = splitIntoPromptBlocks(rawContent);
-    if (sectionType === 'char_ref' && ui.charRefList) {
-        ui.charRefList.innerHTML = `<h4 style="margin:0 0 10px 0;color:#60a5fa;font-size:14px;">🎭 Character-Wise Reference Photo Prompts</h4>`;
-        blocks.forEach((block, idx) => {
-            ui.charRefList.appendChild(
-                createPromptCardWithCopy(`Character Reference Prompt #${idx + 1}`, block, '#60a5fa')
-            );
-        });
-        ui.openPromptsTab();
-    } else if (sectionType === 'scene_video' && ui.videoPromptList) {
-        ui.videoPromptList.innerHTML = `<h4 style="margin:0 0 10px 0;color:#34d399;font-size:14px;">🎥 Scene-Wise Dynamic Video Prompts</h4>`;
-        blocks.forEach((block, idx) => {
-            ui.videoPromptList.appendChild(
-                createPromptCardWithCopy(`Scene Video Prompt #${idx + 1}`, block, '#34d399')
-            );
-        });
-        ui.openPromptsTab();
-    }
-}
-
+// ==========================================
+// ⚙️ Master Setting Toggle for Character Ref & Scene Video Prompts
+// ==========================================
 function ensureCharacterRefMasterSettingToggle() {
     const settingsModal = document.getElementById('masterSettingsModal');
     if (!settingsModal || document.getElementById('agcCharRefToggleRow')) return;
@@ -304,11 +253,14 @@ ${charRefPromptsText}
 ---`;
 }
 
-function appendMessage(text, sender, showCopyBtn = true, phaseTag = '') {
+// 📋 AI मैसेज के साथ 'Copy Script' बटन जोड़ने वाला फंक्शन
+function appendMessage(text, sender, showCopyBtn = true, phaseTag = '', persistToHistory = true) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
 
-    saveFullChatTurn(sender, text, phaseTag);
+    if (persistToHistory) {
+        saveFullChatTurn(sender, text, phaseTag);
+    }
 
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
@@ -392,14 +344,13 @@ try {
             if (nameElem && user.displayName) nameElem.innerText = user.displayName;
             if (logoElem && user.photoURL) logoElem.src = user.photoURL;
 
-            ensurePromptsNewTab();
             ensureCharacterRefMasterSettingToggle();
-            getFullChatHistoryMap();
+            updateSidebarList();
 
             const chatMessages = document.getElementById('chatMessages');
             if (chatMessages && chatMessages.children.length === 0) {
                 const userName = user.displayName ? user.displayName.split(' ')[0] : 'Commander';
-                appendMessage(`Hi ${userName}! बताइए आज कौन सा ऑटोमेशन या कंटेंट तैयार करना है?`, 'ai', false, 'welcome');
+                appendMessage(`Hi ${userName}! आज मैं आपकी क्या सहायता कर सकूं?`, 'ai', false, 'welcome', false);
             }
 
             const token = localStorage.getItem('agc_access_token');
@@ -437,10 +388,13 @@ if (menuToggleBtn && sidebar) {
     });
 }
 
+// GPU Lab बटन: बिना लॉगआउट किए सीधे lab1.html खोलेगा
 const openGpuLabBtn = document.getElementById('openGpuLabBtn');
 if (openGpuLabBtn) {
-    openGpuLabBtn.addEventListener('click', () => {
-        window.location.href = 'lab1.html';
+    openGpuLabBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.location.assign('lab1.html');
     });
 }
 
@@ -544,7 +498,7 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
     const phaseWhenSent = forcedPhase || (currentProcessPhase === 'idle' ? 'story_generation' : currentProcessPhase);
     currentProcessPhase = phaseWhenSent;
 
-    appendMessage(text, 'user', true, phaseWhenSent);
+    appendMessage(text, 'user', true, phaseWhenSent, true);
     if (!overrideText) chatInput.value = '';
 
     let apiKey = localStorage.getItem('apiKey');
@@ -553,7 +507,7 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
     if (!apiKey || !baseUrl) {
         const isSaved = await askForApiKey();
         if (!isSaved) {
-            appendMessage("⚠️ API Key न मिलने के कारण जनरेशन रोक दिया गया।", 'ai', true, 'error');
+            appendMessage("⚠️ API Key न मिलने के कारण जनरेशन रोक दिया गया।", 'ai', true, 'error', true);
             currentProcessPhase = 'idle';
             return;
         }
@@ -647,7 +601,7 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
     if (loadingMsg.parentNode) loadingMsg.parentNode.removeChild(loadingMsg);
 
     if (finalResponse) {
-        appendMessage(finalResponse, 'ai', true, phaseWhenSent);
+        appendMessage(finalResponse, 'ai', true, phaseWhenSent, true);
 
         const isSplitterON = localStorage.getItem('agc_auto_split_active') === 'true';
         const isCharRefToggleON = localStorage.getItem(CHAR_REF_TOGGLE_KEY) === 'true';
@@ -683,7 +637,6 @@ ${generatedStory}
             }
         } else if (phaseWhenSent === 'character_ref_prompt') {
             latestCharRefPromptsText = finalResponse;
-            renderPromptsIntoNewTab('char_ref', finalResponse);
 
             const historyMap = getFullChatHistoryMap();
             if (historyMap[activeSessionId]) {
@@ -700,8 +653,6 @@ ${generatedStory}
                 currentProcessPhase = 'idle';
             }
         } else if (phaseWhenSent === 'scene_video_prompts') {
-            renderPromptsIntoNewTab('scene_video', finalResponse);
-
             const historyMap = getFullChatHistoryMap();
             if (historyMap[activeSessionId]) {
                 historyMap[activeSessionId].sceneVideoPrompts = finalResponse;
@@ -714,7 +665,7 @@ ${generatedStory}
             currentProcessPhase = 'idle';
         }
     } else {
-        appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है।"}`, 'ai', true, 'error');
+        appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है।"}`, 'ai', true, 'error', true);
         currentProcessPhase = 'idle';
     }
 
