@@ -40,22 +40,27 @@ function loadLabStateMap() {
     }
 }
 
-function getDefaultLabData() {
-    return {
-        characters: [
-            { id: 'char_1', label: 'Character 1', prompt: '', imageUrl: '', status: 'idle', errorMsg: '' },
-            { id: 'char_2', label: 'Character 2', prompt: '', imageUrl: '', status: 'idle', errorMsg: '' }
-        ],
-        scenes: [
-            { id: 'scene_1_step_1', label: 'Scene 1 - Step 1 (~10s)', refIndex: 0, prompt: '', imageUrl: '', status: 'idle', errorMsg: '' },
-            { id: 'scene_1_step_2', label: 'Scene 1 - Step 2 (~10s)', refIndex: 0, prompt: '', imageUrl: '', status: 'idle', errorMsg: '' }
-        ]
-    };
+function loadLabDataForSession(currentSessionId) {
+    const map = loadLabStateMap();
+    if (map[currentSessionId] && map[currentSessionId].data) {
+        return map[currentSessionId].data;
+    }
+
+    const latestEntry = Object.values(map)
+        .filter((e) => e && e.data && ((e.data.characters && e.data.characters.length) || (e.data.scenes && e.data.scenes.length)))
+        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
+
+    if (latestEntry && latestEntry.data) {
+        return latestEntry.data;
+    }
+
+    return { characters: [], scenes: [] };
 }
 
 const sessionId = getActiveOrLatestSessionId();
-const allStateMap = loadLabStateMap();
-let labData = allStateMap[sessionId]?.data || getDefaultLabData();
+let labData = loadLabDataForSession(sessionId);
+if (!Array.isArray(labData.characters)) labData.characters = [];
+if (!Array.isArray(labData.scenes)) labData.scenes = [];
 
 function persistLabData() {
     const map = loadLabStateMap();
@@ -93,9 +98,7 @@ function attachPressAndHoldZoom(imgEl, getSrcFn) {
         }, 450);
     };
 
-    const cancelHold = () => {
-        clearTimeout(holdTimer);
-    };
+    const cancelHold = () => clearTimeout(holdTimer);
 
     imgEl.addEventListener('pointerdown', startHold);
     imgEl.addEventListener('pointerup', cancelHold);
@@ -111,7 +114,7 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '') {
         '';
 
     if (!endpoint) {
-        throw new Error('GPU render endpoint set नहीं है (agc_gpu_render_url या baseUrl)।');
+        throw new Error('GPU render endpoint set नहीं है।');
     }
 
     const apiKey = localStorage.getItem('apiKey') || '';
@@ -158,7 +161,6 @@ function createStudioRow(item, kind, onUpdate) {
     const row = document.createElement('div');
     row.className = 'studio-row';
 
-    // Left: Prompt Box + GO + Reload
     const promptSide = document.createElement('div');
     promptSide.className = 'prompt-side';
 
@@ -172,15 +174,15 @@ function createStudioRow(item, kind, onUpdate) {
     if (kind === 'scene') {
         const refBadge = document.createElement('span');
         refBadge.className = 'ref-badge';
-        refBadge.textContent = item.activeRefUrl ? 'Ref Photo Attached ✓' : 'Waiting for Ref Photo';
+        refBadge.textContent = item.activeRefUrl ? 'Ref Photo Linked ✓' : 'Waiting for Ref Photo';
         labelRow.appendChild(refBadge);
     }
 
     const textarea = document.createElement('textarea');
     textarea.className = 'studio-textarea';
     textarea.placeholder = kind === 'char'
-        ? 'यहाँ Character Reference Prompt पेस्ट करें...'
-        : 'यहाँ Scene Video Prompt (~10s step) पेस्ट करें...';
+        ? 'Character Reference Prompt यहाँ ऑटो पेस्ट होगा...'
+        : 'Scene Video Prompt यहाँ ऑटो पेस्ट होगा...';
     textarea.value = item.prompt || '';
 
     textarea.addEventListener('input', () => {
@@ -213,7 +215,6 @@ function createStudioRow(item, kind, onUpdate) {
     promptSide.appendChild(textarea);
     promptSide.appendChild(actionBar);
 
-    // Right: Output Box + Download + Copy + Press&Hold Zoom
     const outputSide = document.createElement('div');
     outputSide.className = 'output-side';
 
@@ -260,7 +261,9 @@ function createStudioRow(item, kind, onUpdate) {
         } else {
             const p = document.createElement('div');
             p.className = 'output-placeholder';
-            p.textContent = 'Prompt डालकर GO दबाएं — आउटपुट यहाँ आएगा।';
+            p.textContent = kind === 'char'
+                ? 'GO दबाएं — रेफरेंस फोटो यहाँ आएगा।'
+                : 'रेफरेंस फोटो व प्रॉम्प्ट तैयार — GO दबाएं।';
             frame.appendChild(p);
         }
     }
@@ -292,7 +295,7 @@ function createStudioRow(item, kind, onUpdate) {
         item.prompt = promptVal;
         if (!promptVal) {
             item.status = 'error';
-            item.errorMsg = 'पहले Prompt डालें।';
+            item.errorMsg = 'Prompt खाली है।';
             persistLabData();
             paintOutput();
             scheduleAutoRetry();
@@ -362,16 +365,30 @@ function renderAllSections() {
 
     if (charContainer) {
         charContainer.innerHTML = '';
-        labData.characters.forEach((charItem) => {
-            charContainer.appendChild(createStudioRow(charItem, 'char', renderAllSections));
-        });
+        if (!labData.characters.length) {
+            const empty = document.createElement('div');
+            empty.className = 'output-placeholder';
+            empty.textContent = 'ऑटोमेशन से कैरेक्टर प्रॉम्प्ट्स आते ही यहाँ बॉक्स अपने आप बन जाएंगे।';
+            charContainer.appendChild(empty);
+        } else {
+            labData.characters.forEach((charItem) => {
+                charContainer.appendChild(createStudioRow(charItem, 'char', renderAllSections));
+            });
+        }
     }
 
     if (sceneContainer) {
         sceneContainer.innerHTML = '';
-        labData.scenes.forEach((sceneItem) => {
-            sceneContainer.appendChild(createStudioRow(sceneItem, 'scene', renderAllSections));
-        });
+        if (!labData.scenes.length) {
+            const empty = document.createElement('div');
+            empty.className = 'output-placeholder';
+            empty.textContent = 'ऑटोमेशन से वीडियो स्टेप्स आते ही यहाँ बॉक्स व रेफरेंस फोटो अपने आप जुड़ जाएंगे।';
+            sceneContainer.appendChild(empty);
+        } else {
+            labData.scenes.forEach((sceneItem) => {
+                sceneContainer.appendChild(createStudioRow(sceneItem, 'scene', renderAllSections));
+            });
+        }
     }
 }
 
@@ -397,8 +414,8 @@ document.getElementById('addSceneRowBtn')?.addEventListener('click', () => {
     const nextNum = labData.scenes.length + 1;
     labData.scenes.push({
         id: `scene_step_${Date.now()}_${nextNum}`,
-        label: `Scene Step ${nextNum} (~10s)`,
-        refIndex: 0,
+        label: `Scene Step ${nextNum}`,
+        refIndex: nextNum - 1,
         prompt: '',
         imageUrl: '',
         status: 'idle',
