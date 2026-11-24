@@ -215,14 +215,14 @@ function ensureCharacterRefMasterSettingToggle() {
 // ==========================================
 function buildCharacterReferencePrompt(sceneSplitText) {
     return `[AUTO_CHARACTER_REF_PROMPT]
-CRITICAL LANGUAGE RULE: Write EVERY reference photo prompt 100% in ENGLISH.
+Write ONLY valid characters present in the script below. Do NOT write "None" or "N/A".
+For each valid character (and any key magical gadget/object if needed), write in this EXACT format:
 
-Task:
-Analyze the scene-by-scene script below and generate ONE Single Master Reference Photo prompt per valid character/role (Hero / Villain / Supporting / Animal) so character look, face, hair, and outfit stay consistent across scenes.
+स्टेप 1: [Character Name]
+Prompt: [Detailed 100% English character sheet prompt with face, outfit, lighting, clean neutral light grey background, 8k]
 
-Rules:
-1. Skip any role with no character (e.g. "N/A" or "None").
-2. Format each valid prompt clearly with its label and prompt text in ENGLISH.
+स्टेप 2: [Next Character Name]
+Prompt: [Detailed 100% English character sheet prompt]
 
 Scene-by-Scene Script:
 ${sceneSplitText}`;
@@ -230,37 +230,35 @@ ${sceneSplitText}`;
 
 function buildScenePhotoPrompts(sceneSplitText, charRefPromptsText) {
     return `[AUTO_SCENE_PHOTO_PROMPTS]
-CRITICAL LANGUAGE RULE: Write EVERY Scene Photo Prompt 100% in ENGLISH.
+Using the script and character prompts below, generate one still image prompt per scene in this EXACT format:
 
-Task:
-Using the scene-by-scene script and character reference prompts below, generate separate still photo prompts for each scene/step incorporating the character reference details so the character's identity, outfit, and scene consistency are preserved before video generation.
+फोटो 1 (सीन 1 - [Short Hindi Title])
+Prompt: [Detailed 100% English image generation prompt keeping the exact same character appearance, outfit, scene setting, lighting, 8k]
 
-Rules:
-1. Keep character identity, face, hair, and attire consistent with the Character Reference Prompts.
-2. List each prompt clearly as Step 1, Step 2, Step 3... in ENGLISH.
+फोटो 2 (सीन 2 - [Short Hindi Title])
+Prompt: [Detailed 100% English image generation prompt]
 
 Scene-by-Scene Script:
 ${sceneSplitText}
 
-Character Reference Prompts:
+Character Prompts:
 ${charRefPromptsText}`;
 }
 
 function buildDynamicSceneVideoPrompts(sceneSplitText, charRefPromptsText, scenePhotoPromptsText) {
     return `[AUTO_SCENE_VIDEO_PROMPTS]
-CRITICAL LANGUAGE RULE: Write EVERY Video Prompt 100% in ENGLISH.
+Using the script, character prompts, and scene photo prompts below, generate one Image-to-Video prompt per scene in this EXACT format:
 
-Task:
-Using the scene-by-scene script, character reference prompts, and scene photo prompts below, generate step-by-step video prompts (Step 1, Step 2, Step 3...) to animate the scene photos into video clips with character consistency, action, expression, and camera movement.
+सीन 1 वीडियो प्रॉम्प्ट
+Prompt: [Detailed 100% English video animation prompt describing camera movement, character action, expression, smooth animation, consistent character design]
 
-Rules:
-1. Write each Step video prompt strictly in ENGLISH.
-2. Keep character appearance and scene continuity consistent.
+सीन 2 वीडियो प्रॉम्प्ट
+Prompt: [Detailed 100% English video animation prompt]
 
 Scene-by-Scene Script:
 ${sceneSplitText}
 
-Character Reference Prompts:
+Character Prompts:
 ${charRefPromptsText}
 
 Scene Photo Prompts:
@@ -270,22 +268,13 @@ ${scenePhotoPromptsText}`;
 // ==========================================
 // 📋 Individual Prompt Cards with Separate Copy Buttons
 // ==========================================
-function extractCleanPromptOnly(blockText) {
-    return (blockText || '')
-        .replace(/^#+\s*.*$/gm, '')
-        .replace(/^(?:Scene\s*\d+.*|सीन\s*\d+.*|Setting\s*:.*|Character Action.*|Voiceover\s*\/?\s*Dialogue.*|संवाद.*):?.*$/gim, '')
-        .replace(/^(?:\*\*?)?(?:नरेटर|रोहन|आर्यन|दर्शक|पेंसिल|किरदार)[^:]*:\s*.*$/gim, '')
-        .replace(/^(?:-\s*)?\*\*?(?:Step\s*\d+|Prompt\s*\d+|प्रॉम्प्ट\s*\d+)\*\*?\s*:?\s*/gim, '')
-        .replace(/^["“”]+|["“”]+$/g, '')
-        .trim();
-}
-
 function isNotApplicablePrompt(text) {
     const t = (text || '').trim().toLowerCase();
     return (
         !t ||
         t === 'none' ||
         t.startsWith('n/a') ||
+        t.includes('no character to reference') ||
         t.includes('no villain character') ||
         t.includes('no supporting characters') ||
         t.includes('no animal characters') ||
@@ -294,23 +283,38 @@ function isNotApplicablePrompt(text) {
     );
 }
 
-function looksLikeCleanVisualPrompt(text) {
-    const clean = extractCleanPromptOnly(text);
-    if (!clean || isNotApplicablePrompt(clean)) return false;
-    const hasLatinLetters = /[a-zA-Z]{4,}/.test(clean);
-    const hasHindiDialogueMarkers = /Voiceover|Dialogue|संवाद|नरेटर|रोहन|आर्यन/i.test(text);
-    return hasLatinLetters && !hasHindiDialogueMarkers;
-}
-
 function parsePromptBlocks(rawAiText) {
     const lines = (rawAiText || '').split('\n').map((l) => l.trim()).filter(Boolean);
     const blocks = [];
+    let lastHeading = '';
+
+    lines.forEach((line) => {
+        const promptMatch = line.match(/^(?:-\s*|\*\s*)?(?:\*\*)?Prompt(?:\*\*)?\s*:\s*(.+)$/i);
+        if (promptMatch) {
+            const cleanPrompt = promptMatch[1].replace(/^["“”]+|["“”]+$/g, '').trim();
+            if (!isNotApplicablePrompt(cleanPrompt)) {
+                blocks.push({
+                    label: lastHeading || `Prompt ${blocks.length + 1}`,
+                    prompt: cleanPrompt
+                });
+            }
+            lastHeading = '';
+        } else if (!line.startsWith('[') && !line.startsWith('---')) {
+            const candidateLabel = line.replace(/\*+/g, '').replace(/:$/, '').trim();
+            if (candidateLabel && !isNotApplicablePrompt(candidateLabel) && !/^Character\s*:\s*None$/i.test(candidateLabel)) {
+                lastHeading = candidateLabel;
+            }
+        }
+    });
+
+    if (blocks.length > 0) return blocks;
+
+    // Fallback for Step / bullet lines if AI didn't write "Prompt:"
     let currentLabel = '';
     let currentText = '';
-
-    const pushBlock = () => {
-        const clean = extractCleanPromptOnly(currentText);
-        if (looksLikeCleanVisualPrompt(clean)) {
+    const flush = () => {
+        const clean = (currentText || '').replace(/^["“”]+|["“”]+$/g, '').trim();
+        if (!isNotApplicablePrompt(clean) && /[a-zA-Z]{4,}/.test(clean)) {
             blocks.push({
                 label: currentLabel || `Prompt ${blocks.length + 1}`,
                 prompt: clean
@@ -321,28 +325,17 @@ function parsePromptBlocks(rawAiText) {
     };
 
     lines.forEach((line) => {
-        const charHeader = line.match(/^(?:\d+[\.\)]\s*)?\*\*?(Hero\s*\/\s*Lead|Villain\s*\/\s*Antagonist|Supporting|Animal|Character(?:\s*\d+)?)\b[^*]*\*?\*?\s*:?\s*(.*)$/i);
-        const stepLine = line.match(/^(?:-\s*)?\*\*?(Step\s*\d+|Prompt\s*\d+|प्रॉम्प्ट\s*\d+)\*\*?\s*:?\s*(.*)$/i);
-        const quotedLine = line.match(/^["“](.+)["”]$/);
-
-        if (charHeader) {
-            if (currentText) pushBlock();
-            currentLabel = line.replace(/^\d+[\.\)]\s*|\*+/g, '').replace(/:$/, '').trim();
-            if (charHeader[2] && charHeader[2].trim()) {
-                currentText = charHeader[2].trim();
-            }
-        } else if (stepLine) {
-            if (currentText) pushBlock();
+        const stepLine = line.match(/^(?:-\s*)?\*\*?(Step\s*\d+|Prompt\s*\d+)\*\*?\s*:?\s*(.*)$/i);
+        if (stepLine) {
+            if (currentText) flush();
             currentLabel = stepLine[1].replace(/\*+/g, '').trim();
             currentText = stepLine[2] || '';
-        } else if (quotedLine && !currentText) {
-            currentText = quotedLine[1];
         } else if (currentText) {
             currentText += ' ' + line;
         }
     });
+    if (currentText) flush();
 
-    if (currentText) pushBlock();
     return blocks;
 }
 
@@ -351,8 +344,8 @@ function renderSeparatePromptCards(rawAiText, kind) {
     if (!chatBox || !rawAiText) return;
 
     const tagPrefix =
-        kind === 'char' ? 'Ref Prompt' :
-        kind === 'photo' ? 'Scene Photo Prompt' :
+        kind === 'char' ? 'Character Prompt' :
+        kind === 'photo' ? 'Photo Prompt' :
         'Video Prompt';
 
     const blocks = parsePromptBlocks(rawAiText);
@@ -411,14 +404,15 @@ function loadLab1StateMap() {
     }
 }
 
-function saveLab1AutoItems(sessionKey, { characters = null, scenes = null }) {
+function saveLab1AutoItems(sessionKey, { characters = null, photos = null, scenes = null }) {
     const map = loadLab1StateMap();
     const activeKey = sessionKey || 'default_gpu_session';
-    const current = map[activeKey]?.data || { characters: [], scenes: [] };
+    const current = map[activeKey]?.data || { characters: [], photos: [], scenes: [] };
 
     const nextData = {
-        characters: Array.isArray(characters) ? characters : current.characters,
-        scenes: Array.isArray(scenes) ? scenes : current.scenes
+        characters: Array.isArray(characters) ? characters : (current.characters || []),
+        photos: Array.isArray(photos) ? photos : (current.photos || []),
+        scenes: Array.isArray(scenes) ? scenes : (current.scenes || [])
     };
 
     map[activeKey] = {
@@ -449,7 +443,31 @@ function syncCharactersToLab1(charRefText, sessionKey) {
         };
     });
 
-    saveLab1AutoItems(sessionKey, { characters: nextChars });
+    saveLab1AutoItems(sessionKey, { characters: nextChars, scenes: [] });
+}
+
+function syncScenePhotosToLab1(scenePhotoText, sessionKey) {
+    const parsedPhotos = parsePromptBlocks(scenePhotoText);
+    if (!parsedPhotos.length) return;
+
+    const map = loadLab1StateMap();
+    const prevPhotos = map[sessionKey]?.data?.photos || [];
+
+    const nextPhotos = parsedPhotos.map((p, i) => {
+        const old = prevPhotos[i] || {};
+        const changed = old.prompt !== p.prompt;
+        return {
+            id: old.id || `scene_photo_${i + 1}`,
+            label: p.label || `Scene Photo ${i + 1}`,
+            refIndex: i,
+            prompt: p.prompt,
+            imageUrl: changed ? '' : (old.imageUrl || ''),
+            status: changed ? 'idle' : (old.status || 'idle'),
+            errorMsg: ''
+        };
+    });
+
+    saveLab1AutoItems(sessionKey, { photos: nextPhotos, scenes: [] });
 }
 
 function syncSceneStepsToLab1(sceneVideoText, sessionKey) {
@@ -774,7 +792,7 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
         phaseWhenSent === 'scene_video_prompts';
 
     const systemInstruction = isPromptPhase
-        ? "You are AGC.AI Core. Write EVERY prompt strictly in clean, detailed ENGLISH."
+        ? "You are AGC.AI Core. Follow the exact format requested and write EVERY prompt strictly in clean, detailed ENGLISH without 'None' or 'N/A'."
         : "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and engaging scripts with character dialogues in HINDI.";
 
     const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
@@ -836,14 +854,16 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
             phaseWhenSent === 'scene_photo_prompts' ||
             phaseWhenSent === 'scene_video_prompts';
 
-        appendMessage(finalResponse, 'ai', !isPromptOutput, phaseWhenSent, true);
-
-        if (phaseWhenSent === 'character_ref_prompt') {
-            renderSeparatePromptCards(finalResponse, 'char');
-        } else if (phaseWhenSent === 'scene_photo_prompts') {
-            renderSeparatePromptCards(finalResponse, 'photo');
-        } else if (phaseWhenSent === 'scene_video_prompts') {
-            renderSeparatePromptCards(finalResponse, 'video');
+        if (isPromptOutput) {
+            saveFullChatTurn('ai', finalResponse, phaseWhenSent);
+            renderSeparatePromptCards(
+                finalResponse,
+                phaseWhenSent === 'character_ref_prompt' ? 'char' :
+                phaseWhenSent === 'scene_photo_prompts' ? 'photo' :
+                'video'
+            );
+        } else {
+            appendMessage(finalResponse, 'ai', true, phaseWhenSent, true);
         }
 
         const isSplitterON = localStorage.getItem('agc_auto_split_active') === 'true';
@@ -890,6 +910,7 @@ ${finalResponse}
             }
         } else if (phaseWhenSent === 'scene_photo_prompts') {
             latestScenePhotoPromptsText = finalResponse;
+            syncScenePhotosToLab1(latestScenePhotoPromptsText, activeSessionId);
 
             if (isCharRefToggleON) {
                 setTimeout(() => {
