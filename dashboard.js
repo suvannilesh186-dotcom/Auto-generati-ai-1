@@ -1,7 +1,5 @@
 // ==========================================
 // AGC.AI Dashboard & Chat JavaScript Logic
-// (Includes AI Message Copy Button, Story-Forward Auto-Splitter,
-//  Character Ref & Dynamic Scene Video Prompts New Tab + Full 48h Chat Saver)
 // ==========================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -10,7 +8,7 @@ import { CONFIG } from './config.js';
 
 let auth;
 let loaderInterval = null;
-let currentProcessPhase = 'idle'; // 'idle' | 'story_generation' | 'scene_splitting' | 'character_ref_prompt' | 'scene_video_prompts'
+let currentProcessPhase = 'idle';
 let activeSessionId = 'session_' + Date.now();
 let currentSessionMessages = [];
 let latestSplitScenesText = '';
@@ -28,9 +26,6 @@ const loaderMessages = [
     "Almost ready..."
 ];
 
-// ==========================================
-// 💾 Full Chat Persistence (48h) Helper Functions
-// ==========================================
 function getFullChatHistoryMap() {
     try {
         const raw = localStorage.getItem(FULL_CHAT_ARCHIVE_KEY);
@@ -48,7 +43,7 @@ function getFullChatHistoryMap() {
         localStorage.setItem(FULL_CHAT_ARCHIVE_KEY, JSON.stringify(cleaned));
         return cleaned;
     } catch (e) {
-        console.error('Error reading 48h full chat history:', e);
+        console.error('48h chat read error:', e);
         return {};
     }
 }
@@ -63,30 +58,35 @@ function saveFullChatTurn(sender, text, phaseTag = '') {
     });
 
     const historyMap = getFullChatHistoryMap();
+    const existing = historyMap[activeSessionId] || {};
+    const transcript = currentSessionMessages
+        .map((m, idx) => `[#${idx + 1} | ${m.sender.toUpperCase()} | ${m.phase}]\n${m.text}`)
+        .join('\n\n------------------------------\n\n');
+
     historyMap[activeSessionId] = {
+        ...existing,
         sessionId: activeSessionId,
         updatedAt: Date.now(),
         timeLabel: new Date().toLocaleString(),
-        messages: currentSessionMessages
+        messages: currentSessionMessages,
+        fullTranscript: transcript
     };
 
     try {
         localStorage.setItem(FULL_CHAT_ARCHIVE_KEY, JSON.stringify(historyMap));
+        localStorage.setItem('agc_recent_project_' + activeSessionId, JSON.stringify({
+            sessionId: activeSessionId,
+            time: new Date().toLocaleString(),
+            script: latestSplitScenesText || text,
+            fullChat: transcript,
+            messages: currentSessionMessages
+        }));
+        if (window.updateSidebarList) window.updateSidebarList();
     } catch (e) {
-        console.error('Failed saving full chat to localStorage:', e);
+        console.error('48h chat save error:', e);
     }
 }
 
-function buildFullConversationTranscript() {
-    if (!currentSessionMessages.length) return '';
-    return currentSessionMessages
-        .map((m, idx) => `[#${idx + 1} | ${m.sender.toUpperCase()} | ${m.phase || 'chat'}]\n${m.text}`)
-        .join('\n\n------------------------------\n\n');
-}
-
-// ==========================================
-// 🗂️ New Tab & Per-Prompt Copy Cards Renderer
-// ==========================================
 function ensurePromptsNewTab() {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages || !chatMessages.parentElement) return null;
@@ -108,7 +108,7 @@ function ensurePromptsNewTab() {
         const promptsTabBtn = document.createElement('button');
         promptsTabBtn.id = 'tabBtnPromptsNewTab';
         promptsTabBtn.type = 'button';
-        promptsTabBtn.innerText = '🎬 Character Ref & Video Prompts (New Tab)';
+        promptsTabBtn.innerText = '🎬 Character Ref & Video Prompts';
         promptsTabBtn.style.cssText = 'padding:7px 14px;border-radius:8px;border:1px solid #333b4f;background:#1a1f2e;color:#cbd5e1;font-size:12px;font-weight:600;cursor:pointer;';
 
         const switchToChat = () => {
@@ -146,9 +146,6 @@ function ensurePromptsNewTab() {
         promptsTabPanel.id = 'agcPromptsNewTabPanel';
         promptsTabPanel.style.cssText = 'display:none;flex:1;overflow-y:auto;padding:14px;background:#0d1017;color:#f1f5f9;';
         promptsTabPanel.innerHTML = `
-            <div style="margin-bottom:14px;padding:10px 12px;border-radius:8px;background:#161b26;border:1px solid #283044;font-size:12px;color:#94a3b8;">
-                यहाँ कैरेक्टर-वाइज रेफरेंस फ़ोटो प्रॉम्प्ट्स (Hero / Villain / Supporting / Animal) और सीन-वाइज वीडियो प्रॉम्प्ट्स दिखेंगे। हर प्रॉम्प्ट के नीचे <strong style="color:#fff;">Copy</strong> बटन दिया गया है।
-            </div>
             <div id="agcCharRefPromptList" style="margin-bottom:20px;"></div>
             <div id="agcSceneVideoPromptList"></div>
         `;
@@ -188,8 +185,6 @@ function createPromptCardWithCopy(titleText, bodyText, badgeColor = '#38bdf8') {
         navigator.clipboard.writeText(bodyText).then(() => {
             copyBtn.innerText = '✅ Copied!';
             setTimeout(() => { copyBtn.innerText = '📋 Copy Prompt'; }, 2000);
-        }).catch((err) => {
-            console.error('Prompt copy failed:', err);
         });
     };
 
@@ -233,9 +228,6 @@ function renderPromptsIntoNewTab(sectionType, rawContent) {
     }
 }
 
-// ==========================================
-// ⚙️ Master Setting Toggle for Character Ref & Scene Video Prompts
-// ==========================================
 function ensureCharacterRefMasterSettingToggle() {
     const settingsModal = document.getElementById('masterSettingsModal');
     if (!settingsModal || document.getElementById('agcCharRefToggleRow')) return;
@@ -249,7 +241,7 @@ function ensureCharacterRefMasterSettingToggle() {
     const labelBox = document.createElement('div');
     labelBox.innerHTML = `
         <div style="font-size:13px;font-weight:700;color:#fff;">🎭 Auto Character Ref & Video Prompts</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Short & Long दोनों में Scene Split के बाद Character Ref व Scene Video प्रॉम्प्ट्स</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Scene Split के बाद Character Ref व Scene Video प्रॉम्प्ट्स</div>
     `;
 
     const toggleBtn = document.createElement('button');
@@ -273,49 +265,38 @@ function ensureCharacterRefMasterSettingToggle() {
     row.appendChild(toggleBtn);
 
     const targetContainer =
-        settingsModal.querySelector('.modal-body') ||
-        settingsModal.querySelector('.settings-body') ||
+        settingsModal.querySelector('.master-modal-body') ||
         settingsModal.querySelector('div > div') ||
         settingsModal;
 
     targetContainer.appendChild(row);
 }
 
-// ==========================================
-// 📝 Prompt Builders (Character Ref + Dynamic Scene Video Prompts)
-// ==========================================
 function buildCharacterReferencePrompt(sceneSplitText) {
-    return `[AUTO_CHARACTER_REF_PROMPT]: नीचे दी गई सीन-बाय-सीन स्क्रिप्ट का विश्लेषण करके उसमें आने वाले सभी कैरेक्टर्स को पहचानो और उनकी श्रेणी के अनुसार रेफरेंस फ़ोटो जनरेट करने के लिए प्रॉम्प्ट्स तैयार करो। यह ट्रिगर Short और Long दोनों तरह की वीडियो स्क्रिप्ट्स के लिए है।
+    return `[AUTO_CHARACTER_REF_PROMPT]: नीचे दी गई सीन-बाय-सीन स्क्रिप्ट के सभी किरदारों की श्रेणी पहचानकर (Hero / Villain / Supporting / Animal) प्रत्येक किरदार के लिए 4–5 अलग-अलग फ़ोटो के बजाय केवल **एक मुख्य रेफरेंस फ़ोटो (Single Master Reference Photo)** का प्रॉम्प्ट तैयार करें।
 
-महत्वपूर्ण नियम:
-1. हर मुख्य किरदार के लिए 4–5 अलग-अलग फ़ोटो के बजाय केवल **एक साफ़ और दमदार मुख्य रेफरेंस फ़ोटो (Single Master Reference Photo)** का प्रॉम्प्ट बनाओ, ताकि उसी एक फ़ोटो से आगे के सीन्स में किरदार की पहचान व लुक न बदले।
-2. प्रत्येक कैरेक्टर को उसकी श्रेणी के अनुसार सख्त निर्देश दो:
-   - **हीरो / मुख्य किरदार (Hero / Lead):** सबसे स्पष्ट, आकर्षक, दमदार और उच्च-गुणवत्ता (high-detail, sharp facial clarity, clean lighting) वाली रेफरेंस फ़ोटो का प्रॉम्प्ट बनाओ, जिसमें उसका तय पहनावा, हेयरस्टाइल और पहचान साफ़ रहे।
-   - **विलेन / विरोधी किरदार (Villain / Antagonist):** कहानी के हिसाब से तीखे, प्रभावशाली या दमदार एक्सप्रेशन और विशिष्ट लुक/पहनावे के साथ हाई-क्वालिटी रेफरेंस फ़ोटो का प्रॉम्प्ट बनाओ।
-   - **सपोर्टिंग / सामान्य किरदार (Supporting Characters):** कहानी के अनुसार स्पष्ट, स्वाभाविक और सुसंगत (consistent) लुक व कपड़ों के साथ रेफरेंस फ़ोटो का प्रॉम्प्ट बनाओ।
-   - **एनिमल / पशु किरदार (Animal Characters):** जानवर की प्रजाति/नस्ल, रंग, फर/त्वचा की बनावट, आकार और खास पहचान को साफ़ व विस्तृत (detailed fur/texture, accurate body proportions) रखते हुए रेफरेंस फ़ोटो का प्रॉम्प्ट बनाओ।
-3. हर प्रॉम्प्ट के अंत में कॉपी करने योग्य स्पष्ट "Reference Image Prompt:" सेक्शन दो। पूरा आउटपुट स्पष्ट HINDI में हो और किसी एक सीन के खास एक्शन को रेफरेंस प्रॉम्प्ट में न मिलाया जाए।
+नियम:
+- Hero / Lead: स्पष्ट, दमदार और उच्च-गुणवत्ता (sharp facial clarity, consistent look & outfit) वाली 1 रेफरेंस फ़ोटो।
+- Villain / Antagonist: तीखे एक्सप्रेशन और विशिष्ट लुक/पहनावे के साथ 1 हाई-क्वालिटी रेफरेंस फ़ोटो।
+- Supporting: सुसंगत लुक व कपड़ों के साथ 1 रेफरेंस फ़ोटो।
+- Animal: प्रजाति/नस्ल, रंग, फर/त्वचा की बनावट और आकार स्पष्ट रखते हुए 1 रेफरेंस फ़ोटो।
+- पूरा आउटपुट स्पष्ट HINDI में हो।
 
 ---
-सीन-बाय-सीन स्क्रिप्ट:
 ${sceneSplitText}
 ---`;
 }
 
 function buildDynamicSceneVideoPrompts(sceneSplitText, charRefPromptsText) {
-    return `[AUTO_SCENE_VIDEO_PROMPTS]: नीचे दी गई सीन-बाय-सीन स्क्रिप्ट और कैरेक्टर रेफरेंस फ़ोटो प्रॉम्प्ट्स के आधार पर, प्रत्येक सीन की रेफरेंस फ़ोटो से आगे का वीडियो बनाने के लिए सीन-वाइज वीडियो प्रॉम्प्ट्स तैयार करो।
+    return `[AUTO_SCENE_VIDEO_PROMPTS]: नीचे दी गई सीन-बाय-सीन स्क्रिप्ट और कैरेक्टर रेफरेंस प्रॉम्प्ट्स के आधार पर, प्रत्येक सीन की रेफरेंस फ़ोटो से आगे का वीडियो बनाने के लिए सीन-वाइज वीडियो प्रॉम्प्ट्स तैयार करें।
 
-सख्त निर्देश:
-1. **कोई फिक्स्ड संख्या नहीं (Dynamic Count):** प्रॉम्प्ट्स की संख्या पहले से फिक्स न रखो। हर सीन की लंबाई, डायलॉग्स/वॉयसओवर और एक्शन के हिसाब से AI खुद तय करे कि उस सीन को पूरा करने के लिए कितने वीडियो प्रॉम्प्ट्स (जैसे 1, 2, 3, 10, 15, 20, 30 या उससे अधिक—जितनी ज़रूरत हो) बनाने हैं।
-2. यदि किसी सीन में लंबा समय या अधिक डायलॉग्स हैं और एक ही रेफरेंस फ़ोटो से आगे बढ़ाना है, तो उसी सीन के लिए क्रमिक (step-by-step) वीडियो प्रॉम्प्ट्स बनाओ ताकि पूरा सीन व डायलॉग बीच में अधूरा न रहे।
-3. प्रत्येक वीडियो प्रॉम्प्ट में:
-   - कौन-सा सीन और कौन-सा क्रमिक हिस्सा/डायलॉग चल रहा है
-   - रेफरेंस फ़ोटो व कैरेक्टर कंसिस्टेंसी (चेहरा/लुक/कपड़े न बदलें)
-   - कैमरा मूवमेंट, एक्सप्रेशन और सिंगल एक्शन
-   स्पष्ट HINDI में लिखो।
+नियम:
+- कोई फिक्स्ड संख्या नहीं रखनी है। हर सीन की लंबाई, डायलॉग्स और एक्शन के हिसाब से AI खुद तय करे कि कितने प्रॉम्प्ट्स (जैसे 1, 2, 3, 10, 15, 20, 30 या अधिक) बनाने हैं।
+- लंबे सीन या अधिक डायलॉग्स में उसी रेफरेंस फ़ोटो से आगे बढ़ाते हुए क्रमिक प्रॉम्प्ट्स बनाएं।
+- हर प्रॉम्प्ट में सीन नंबर, डायलॉग/क्रम, कैरेक्टर कंसिस्टेंसी, कैमरा मूवमेंट और सिंगल एक्शन स्पष्ट HINDI में लिखें।
 
 ---
-सीन-बाय-सीन स्क्रिप्ट:
+सीन स्क्रिप्ट:
 ${sceneSplitText}
 
 कैरेक्टर रेफरेंस प्रॉम्प्ट्स:
@@ -323,7 +304,6 @@ ${charRefPromptsText}
 ---`;
 }
 
-// 📋 AI मैसेज के साथ 'Copy Script' बटन जोड़ने वाला अपडेटेड फंक्शन
 function appendMessage(text, sender, showCopyBtn = true, phaseTag = '') {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
@@ -346,8 +326,6 @@ function appendMessage(text, sender, showCopyBtn = true, phaseTag = '') {
             navigator.clipboard.writeText(text).then(() => {
                 copyBtn.innerText = '✅ Copied!';
                 setTimeout(() => { copyBtn.innerText = '📋 Copy Script'; }, 2000);
-            }).catch((err) => {
-                console.error('Copy failed', err);
             });
         };
 
@@ -367,15 +345,11 @@ async function fetchYouTubeChannelData(accessToken) {
 
         if (data.items && data.items.length > 0) {
             const channel = data.items[0];
-            const channelName = channel.snippet.title;
-            const channelLogo = channel.snippet.thumbnails.default.url;
-            const subscriberCount = channel.statistics.subscriberCount;
-
             const nameElem = document.getElementById('channel-name');
             const logoElem = document.getElementById('channel-logo');
 
-            if (nameElem) nameElem.innerText = channelName;
-            if (logoElem) logoElem.src = channelLogo;
+            if (nameElem) nameElem.innerText = channel.snippet.title;
+            if (logoElem) logoElem.src = channel.snippet.thumbnails.default.url;
 
             const profileInfo = document.querySelector('.profile-info');
             if (profileInfo) {
@@ -383,13 +357,10 @@ async function fetchYouTubeChannelData(accessToken) {
                 if (!subSpan) {
                     subSpan = document.createElement('span');
                     subSpan.id = 'subCount';
-                    subSpan.style.display = 'block';
-                    subSpan.style.fontSize = '11px';
-                    subSpan.style.color = '#58a6ff';
-                    subSpan.style.marginTop = '2px';
+                    subSpan.style.cssText = 'display:block;font-size:11px;color:#58a6ff;margin-top:2px;';
                     profileInfo.appendChild(subSpan);
                 }
-                subSpan.innerText = `Subscribers: ${subscriberCount}`;
+                subSpan.innerText = `Subscribers: ${channel.statistics.subscriberCount}`;
             }
         }
     } catch (error) {
@@ -433,10 +404,8 @@ try {
 
             const token = localStorage.getItem('agc_access_token');
             if (token) fetchYouTubeChannelData(token);
-        } else {
-            if (!window.location.href.includes('index.html')) {
-                window.location.href = 'index.html';
-            }
+        } else if (!window.location.href.includes('index.html')) {
+            window.location.href = 'index.html';
         }
     });
 
@@ -566,219 +535,196 @@ const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendChatBtn = document.getElementById('sendChatBtn');
 
-if (sendChatBtn && chatInput && chatMessages) {
-    const handleSendMessage = async () => {
-        const text = chatInput.value.trim();
-        if (!text) return;
+async function executePromptTurn(overrideText = '', forcedPhase = null) {
+    if (!chatInput || !sendChatBtn || !chatMessages) return;
 
-        const phaseWhenSent = currentProcessPhase;
-        appendMessage(text, 'user', true, phaseWhenSent);
-        chatInput.value = '';
+    const text = (overrideText || chatInput.value).trim();
+    if (!text) return;
 
-        let apiKey = localStorage.getItem('apiKey');
-        let baseUrl = localStorage.getItem('baseUrl');
+    const phaseWhenSent = forcedPhase || (currentProcessPhase === 'idle' ? 'story_generation' : currentProcessPhase);
+    currentProcessPhase = phaseWhenSent;
 
-        if (!apiKey || !baseUrl) {
-            const isSaved = await askForApiKey();
-            if (!isSaved) {
-                appendMessage("⚠️ API Key न मिलने के कारण जनरेशन रोक दिया गया।", 'ai', true, 'error');
-                currentProcessPhase = 'idle';
-                return;
-            }
-            apiKey = localStorage.getItem('apiKey');
-            baseUrl = localStorage.getItem('baseUrl');
+    appendMessage(text, 'user', true, phaseWhenSent);
+    if (!overrideText) chatInput.value = '';
+
+    let apiKey = localStorage.getItem('apiKey');
+    let baseUrl = localStorage.getItem('baseUrl');
+
+    if (!apiKey || !baseUrl) {
+        const isSaved = await askForApiKey();
+        if (!isSaved) {
+            appendMessage("⚠️ API Key न मिलने के कारण जनरेशन रोक दिया गया।", 'ai', true, 'error');
+            currentProcessPhase = 'idle';
+            return;
         }
+        apiKey = localStorage.getItem('apiKey');
+        baseUrl = localStorage.getItem('baseUrl');
+    }
 
-        const loadingMsg = document.createElement('div');
-        loadingMsg.className = 'ai-loader chat-inline-loader';
-        loadingMsg.innerHTML = `
-            <div class="ai-loader__main-composition">
-                <div class="ai-loader__orbits-container">
-                    <svg class="ai-loader__svg-ring outer-ring-svg" viewBox="0 0 36 36">
-                        <circle class="track-ring" cx="18" cy="18" r="16"></circle>
-                        <circle class="outer-arc" cx="18" cy="18" r="16"></circle>
-                    </svg>
-                    <svg class="ai-loader__svg-ring inner-ring-svg" viewBox="0 0 36 36">
-                        <circle class="inner-arc" cx="18" cy="18" r="11"></circle>
-                    </svg>
-                </div>
-                <div class="ai-loader__inner-disc"></div>
-                <div class="ai-loader__logo">
-                    <img src="logo.png" alt="AI" class="ai-logo-center" onerror="this.style.display='none'">
-                </div>
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'ai-loader chat-inline-loader';
+    loadingMsg.innerHTML = `
+        <div class="ai-loader__main-composition">
+            <div class="ai-loader__orbits-container">
+                <svg class="ai-loader__svg-ring outer-ring-svg" viewBox="0 0 36 36">
+                    <circle class="track-ring" cx="18" cy="18" r="16"></circle>
+                    <circle class="outer-arc" cx="18" cy="18" r="16"></circle>
+                </svg>
+                <svg class="ai-loader__svg-ring inner-ring-svg" viewBox="0 0 36 36">
+                    <circle class="inner-arc" cx="18" cy="18" r="11"></circle>
+                </svg>
             </div>
-            <div class="ai-loader__status-pill">
-                <span class="ai-loader__text" id="loader-text">Thinking...</span>
-                <div class="ai-loader__dots">
-                    <span class="ai-loader__dot ai-loader__dot--1"></span>
-                    <span class="ai-loader__dot ai-loader__dot--2"></span>
-                    <span class="ai-loader__dot ai-loader__dot--3"></span>
-                </div>
+            <div class="ai-loader__inner-disc"></div>
+            <div class="ai-loader__logo">
+                <img src="logo.png" alt="AI" class="ai-logo-center" onerror="this.style.display='none'">
             </div>
-        `;
-        chatMessages.appendChild(loadingMsg);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        </div>
+        <div class="ai-loader__status-pill">
+            <span class="ai-loader__text" id="loader-text">Thinking...</span>
+            <div class="ai-loader__dots">
+                <span class="ai-loader__dot ai-loader__dot--1"></span>
+                <span class="ai-loader__dot ai-loader__dot--2"></span>
+                <span class="ai-loader__dot ai-loader__dot--3"></span>
+            </div>
+        </div>
+    `;
+    chatMessages.appendChild(loadingMsg);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 
-        startLoaderTextRotation();
+    startLoaderTextRotation();
 
-        const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
-        let finalResponse = null;
-        let lastError = null;
+    const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
+    let finalResponse = null;
+    let lastError = null;
 
-        for (const model of modelsToTry) {
-            for (let attempt = 1; attempt <= 2; attempt++) {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000);
+    for (const model of modelsToTry) {
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-                try {
-                    const response = await fetch(baseUrl, {
-                        method: 'POST',
-                        signal: controller.signal,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${apiKey}`
-                        },
-                        body: JSON.stringify({
-                            model: model,
-                            messages: [
-                                { role: "system", content: "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and highly engaging scripts with full character dialogues in HINDI." },
-                                { role: "user", content: text }
-                            ],
-                            temperature: 0.7,
-                            max_tokens: 3000
-                        })
-                    });
+            try {
+                const response = await fetch(baseUrl, {
+                    method: 'POST',
+                    signal: controller.signal,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: "system", content: "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and highly engaging scripts with full character dialogues in HINDI." },
+                            { role: "user", content: text }
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 3000
+                    })
+                });
 
-                    clearTimeout(timeoutId);
-                    const data = await response.json();
+                clearTimeout(timeoutId);
+                const data = await response.json();
 
-                    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-                        finalResponse = data.choices[0].message.content;
-                        break;
-                    } else if (data.error) {
-                        lastError = data.error.message;
-                        if (response.status === 429 || response.status === 503) {
-                            await new Promise(res => setTimeout(res, 1200));
-                            continue;
-                        } else { break; }
-                    }
-                } catch (err) {
-                    clearTimeout(timeoutId);
-                    lastError = err.message;
+                if (data.choices && data.choices.length > 0 && data.choices[0].message) {
+                    finalResponse = data.choices[0].message.content;
                     break;
+                } else if (data.error) {
+                    lastError = data.error.message;
+                    if (response.status === 429 || response.status === 503) {
+                        await new Promise(res => setTimeout(res, 1200));
+                        continue;
+                    } else { break; }
                 }
+            } catch (err) {
+                clearTimeout(timeoutId);
+                lastError = err.message;
+                break;
             }
-            if (finalResponse) break;
         }
+        if (finalResponse) break;
+    }
 
-        if (loaderInterval) clearInterval(loaderInterval);
-        if (loadingMsg.parentNode) loadingMsg.parentNode.removeChild(loadingMsg);
+    if (loaderInterval) clearInterval(loaderInterval);
+    if (loadingMsg.parentNode) loadingMsg.parentNode.removeChild(loadingMsg);
 
-        // ==========================================
-        // 🕵️ Automation Chain: Story -> Scene Split -> Character Ref -> Dynamic Scene Video
-        // ==========================================
-        if (finalResponse) {
-            appendMessage(finalResponse, 'ai', true, phaseWhenSent);
+    if (finalResponse) {
+        appendMessage(finalResponse, 'ai', true, phaseWhenSent);
 
-            const isSplitterON = localStorage.getItem('agc_auto_split_active') === 'true';
-            const isCharRefToggleON = localStorage.getItem(CHAR_REF_TOGGLE_KEY) === 'true';
+        const isSplitterON = localStorage.getItem('agc_auto_split_active') === 'true';
+        const isCharRefToggleON = localStorage.getItem(CHAR_REF_TOGGLE_KEY) === 'true';
 
-            if (phaseWhenSent === 'story_generation' && isSplitterON) {
-                currentProcessPhase = 'scene_splitting';
-                const generatedStory = finalResponse;
-
-                setTimeout(() => {
-                    const splitPrompt = `[AUTO_SCENE_SPLITTER]: ठीक इसके नीचे दी गई इस स्क्रिप्ट को एक प्रोफेशनल फिल्म डायरेक्टर की तरह सीन-बाय-सीन (Scene 1, Scene 2, Scene 3...) में अलग-अलग तोड़ो:
+        if (phaseWhenSent === 'story_generation' && isSplitterON) {
+            const generatedStory = finalResponse;
+            const splitPrompt = `[AUTO_SCENE_SPLITTER]: नीचे दी गई स्क्रिप्ट को Scene 1, Scene 2, Scene 3... में अलग-अलग तोड़ें:
 
 ---
 ${generatedStory}
 ---
 
-यह सबसे महत्वपूर्ण और सख्त नियम है, इसका पूरी तरह पालन करें:
-- **एक सीन में केवल एक ही सिंगल एक्शन (Single Action Only) होना चाहिए।** गलती से भी एक ही सीन या फोटो प्रॉम्प्ट में दो अलग-अलग घटनाएं या एक्शन (जैसे 'हंसना और अचानक जादू करना') बिल्कुल न आएँ। अगर एक्शन बड़ा है, तो उसे अलग-अलग सीन में बांट दो।
-- हर सीन के लिए मुझे यह 3 चीज़ें स्पष्ट HINDI में चाहिए:
-  1. Setting (सीन कहाँ का है / बैकग्राउंड का विवरण)
-  2. Character Action & Attire (किरदार का केवल और केवल एक सटीक एक्शन और उसने क्या पहना है)
-  3. Voiceover/Dialogue (सीन का डायलॉग या वॉयसओवर)
-ध्यान रहे, पूरा आउटपुट सिर्फ HINDI भाषा में हो और हर सीन पूरी तरह स्वतंत्र (Independent) हो ताकि हर सीन की अलग, साफ़ और परफेक्ट AI Image Generate की जा सके।`;
+नियम:
+- एक सीन में केवल एक ही सिंगल एक्शन हो।
+- हर सीन के लिए स्पष्ट HINDI में दें:
+  1. Setting
+  2. Character Action & Attire
+  3. Voiceover/Dialogue`;
 
-                    chatInput.value = splitPrompt;
-                    sendChatBtn.click();
-                }, 3000);
-            } else if (phaseWhenSent === 'scene_splitting') {
-                latestSplitScenesText = finalResponse;
+            setTimeout(() => {
+                executePromptTurn(splitPrompt, 'scene_splitting');
+            }, 1500);
+        } else if (phaseWhenSent === 'scene_splitting') {
+            latestSplitScenesText = finalResponse;
+            saveFullChatTurn('system', 'Scene split saved to 48h history.', 'scene_splitting_saved');
 
-                const timestamp = new Date().toLocaleString();
-                const fullHistorySnapshot = buildFullConversationTranscript();
-                const projectData = {
-                    sessionId: activeSessionId,
-                    time: timestamp,
-                    script: finalResponse,
-                    fullChat: fullHistorySnapshot,
-                    messages: currentSessionMessages
-                };
-
-                localStorage.setItem('agc_recent_project_' + Date.now(), JSON.stringify(projectData));
-                if (window.updateSidebarList) window.updateSidebarList();
-
-                if (isCharRefToggleON) {
-                    currentProcessPhase = 'character_ref_prompt';
-                    setTimeout(() => {
-                        appendMessage("✅ सिंगल-एक्शन सीन स्प्लिट सेव हुआ! अब Character Reference Photo Prompts जनरेट किए जा रहे हैं...", 'ai', false, 'status');
-                        chatInput.value = buildCharacterReferencePrompt(latestSplitScenesText);
-                        sendChatBtn.click();
-                    }, 1500);
-                } else {
-                    currentProcessPhase = 'idle';
-                    setTimeout(() => {
-                        appendMessage("✅ सिंगल-एक्शन आधारित सीन-बाय-सीन डेटा और पूरी चैट 'Recent Scripts (48h)' में सफलतापर्वक सेव कर ली गई है!", 'ai', true, 'status');
-                    }, 1000);
-                }
-            } else if (phaseWhenSent === 'character_ref_prompt') {
-                latestCharRefPromptsText = finalResponse;
-                renderPromptsIntoNewTab('char_ref', finalResponse);
-
-                const historyMap = getFullChatHistoryMap();
-                if (historyMap[activeSessionId]) {
-                    historyMap[activeSessionId].charRefPrompts = finalResponse;
-                    localStorage.setItem(FULL_CHAT_ARCHIVE_KEY, JSON.stringify(historyMap));
-                }
-
-                if (isCharRefToggleON) {
-                    currentProcessPhase = 'scene_video_prompts';
-                    setTimeout(() => {
-                        chatInput.value = buildDynamicSceneVideoPrompts(latestSplitScenesText, latestCharRefPromptsText);
-                        sendChatBtn.click();
-                    }, 2000);
-                } else {
-                    currentProcessPhase = 'idle';
-                }
-            } else if (phaseWhenSent === 'scene_video_prompts') {
-                renderPromptsIntoNewTab('scene_video', finalResponse);
-
-                const historyMap = getFullChatHistoryMap();
-                if (historyMap[activeSessionId]) {
-                    historyMap[activeSessionId].sceneVideoPrompts = finalResponse;
-                    historyMap[activeSessionId].fullTranscript = buildFullConversationTranscript();
-                    localStorage.setItem(FULL_CHAT_ARCHIVE_KEY, JSON.stringify(historyMap));
-                }
-
-                currentProcessPhase = 'idle';
-                appendMessage("✅ Character Reference Prompts और Scene-Wise Dynamic Video Prompts नए टैब में तैयार हैं, और पूरी चैट (48h) सेव कर दी गई है!", 'ai', true, 'status');
+            if (isCharRefToggleON) {
+                setTimeout(() => {
+                    executePromptTurn(buildCharacterReferencePrompt(latestSplitScenesText), 'character_ref_prompt');
+                }, 1500);
             } else {
                 currentProcessPhase = 'idle';
             }
+        } else if (phaseWhenSent === 'character_ref_prompt') {
+            latestCharRefPromptsText = finalResponse;
+            renderPromptsIntoNewTab('char_ref', finalResponse);
+
+            const historyMap = getFullChatHistoryMap();
+            if (historyMap[activeSessionId]) {
+                historyMap[activeSessionId].charRefPrompts = finalResponse;
+                historyMap[activeSessionId].updatedAt = Date.now();
+                localStorage.setItem(FULL_CHAT_ARCHIVE_KEY, JSON.stringify(historyMap));
+            }
+
+            if (isCharRefToggleON) {
+                setTimeout(() => {
+                    executePromptTurn(buildDynamicSceneVideoPrompts(latestSplitScenesText, latestCharRefPromptsText), 'scene_video_prompts');
+                }, 1500);
+            } else {
+                currentProcessPhase = 'idle';
+            }
+        } else if (phaseWhenSent === 'scene_video_prompts') {
+            renderPromptsIntoNewTab('scene_video', finalResponse);
+
+            const historyMap = getFullChatHistoryMap();
+            if (historyMap[activeSessionId]) {
+                historyMap[activeSessionId].sceneVideoPrompts = finalResponse;
+                historyMap[activeSessionId].updatedAt = Date.now();
+                localStorage.setItem(FULL_CHAT_ARCHIVE_KEY, JSON.stringify(historyMap));
+            }
+
+            currentProcessPhase = 'idle';
         } else {
-            appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है।"}`, 'ai', true, 'error');
             currentProcessPhase = 'idle';
         }
+    } else {
+        appendMessage(`⚠️ सर्वर लोड: ${lastError || "अस्थायी रूप से सर्वर पर लोड है।"}`, 'ai', true, 'error');
+        currentProcessPhase = 'idle';
+    }
 
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    };
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
 
-    sendChatBtn.addEventListener('click', handleSendMessage);
+if (sendChatBtn && chatInput && chatMessages) {
+    sendChatBtn.addEventListener('click', () => executePromptTurn('', currentProcessPhase === 'idle' ? 'story_generation' : currentProcessPhase));
     chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSendMessage();
+        if (e.key === 'Enter') executePromptTurn('', currentProcessPhase === 'idle' ? 'story_generation' : currentProcessPhase);
     });
 }
 
@@ -799,9 +745,6 @@ window.addEventListener('click', (e) => {
     if (e.target === settingsModal) { settingsModal.style.display = 'none'; }
 });
 
-// ==========================================
-// Event Listener for Automation Triggers (Short & Long)
-// ==========================================
 window.addEventListener('message', (event) => {
     if (
         event.data &&
@@ -811,10 +754,10 @@ window.addEventListener('message', (event) => {
             event.data.type === 'AUTO_TRIGGER_PROMPT_LONG'
         )
     ) {
-        currentProcessPhase = 'story_generation';
-        if (chatInput && sendChatBtn) {
-            chatInput.value = event.data.prompt;
-            sendChatBtn.click();
-        }
+        activeSessionId = 'session_' + Date.now();
+        currentSessionMessages = [];
+        latestSplitScenesText = '';
+        latestCharRefPromptsText = '';
+        executePromptTurn(event.data.prompt, 'story_generation');
     }
 });
