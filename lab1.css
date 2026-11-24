@@ -1,5 +1,5 @@
 /* ==========================================
-   AGC.AI - GPU Lab 1 Stylesheet
+   AGC.AI GPU LAB (lab1.css)
    ========================================== */
 
 * {
@@ -8,96 +8,114 @@
     padding: 0;
 }
 
-body.lab1-body {
-    background: #070b12;
-    color: #f1f5f9;
+body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #090d16;
+    color: #f1f5f9;
     min-height: 100vh;
-    padding: 14px;
+    line-height: 1.45;
 }
 
-.lab1-canvas {
-    max-width: 960px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-/* Top Bar */
+/* Topbar */
 .lab1-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
     padding: 12px 16px;
-    background: #0f1624;
-    border: 1px solid #1e293b;
-    border-radius: 12px;
+    background: rgba(13, 19, 33, 0.94);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid #1e293b;
+}
+
+.lab1-brand-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .lab1-title {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 800;
-    color: #58a6ff;
-    letter-spacing: 0.4px;
+    color: #38bdf8;
+    letter-spacing: 0.3px;
 }
 
-.lab1-session-tag {
+.lab1-status-pill {
     font-size: 11px;
     font-weight: 700;
-    padding: 5px 10px;
-    border-radius: 999px;
-    background: rgba(16, 185, 129, 0.14);
     color: #34d399;
+    background: rgba(16, 185, 129, 0.14);
     border: 1px solid rgba(16, 185, 129, 0.35);
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
 }
 
-/* Sections (1. Character Ref, 2. Scene Photo, 3. Scene Video) */
+/* Main Container */
+.lab1-main {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Section Card */
 .lab1-section {
-    background: #0c121d;
+    background: #0f172a;
     border: 1px solid #1e293b;
     border-radius: 14px;
     padding: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
 .section-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
     flex-wrap: wrap;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #1a2436;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #1e293b;
 }
 
 .section-head h2 {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 700;
     color: #f8fafc;
 }
 
+.section-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Rows */
 .rows-container {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-/* Individual Row (Prompt Left + Output Right) */
 .studio-row {
     display: grid;
-    grid-template-columns: 1.25fr 1fr;
-    gap: 12px;
-    background: #101827;
-    border: 1px solid #243249;
+    grid-template-columns: 1.35fr 0.85fr;
+    gap: 14px;
+    background: #111827;
+    border: 1px solid #243044;
     border-radius: 12px;
     padding: 12px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 820px) {
     .studio-row {
         grid-template-columns: 1fr;
     }
@@ -113,45 +131,48 @@ body.lab1-body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 8px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: #93c5fd;
 }
 
 .ref-badge {
-    font-size: 10px;
-    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
     border-radius: 999px;
-    background: #172554;
-    color: #93c5fd;
-    border: 1px solid #2563eb;
-    white-space: nowrap;
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #334155;
 }
 
 .studio-textarea {
     width: 100%;
-    min-height: 110px;
+    min-height: 105px;
     resize: vertical;
-    background: #080d17;
+    background: #090d16;
     color: #f8fafc;
-    border: 1px solid #26354d;
-    border-radius: 8px;
-    padding: 10px;
+    border: 1px solid #2b384e;
+    border-radius: 10px;
+    padding: 10px 12px;
     font-size: 13px;
-    line-height: 1.45;
+    font-family: inherit;
     outline: none;
+    transition: border-color 0.2s ease;
 }
 
 .studio-textarea:focus {
-    border-color: #3b82f6;
+    border-color: #38bdf8;
 }
 
+/* Action Bar & GO All Controls */
 .action-bar {
     display: flex;
     align-items: center;
-    gap: 8px;
     flex-wrap: wrap;
+    gap: 8px;
 }
 
 .retry-countdown {
@@ -160,18 +181,74 @@ body.lab1-body {
     font-weight: 600;
 }
 
+/* Buttons */
+.lab1-btn {
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: #f8fafc;
+    border-radius: 8px;
+    padding: 8px 13px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.12s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.lab1-btn:hover {
+    background: #273549;
+}
+
+.lab1-btn:active {
+    transform: scale(0.97);
+}
+
+.lab1-btn.small {
+    padding: 6px 11px;
+    font-size: 12px;
+}
+
+.lab1-btn.go {
+    background: #10b981;
+    border-color: #059669;
+    color: #04130d;
+}
+
+.lab1-btn.go:hover {
+    background: #34d399;
+}
+
+.lab1-btn.reload {
+    background: #f59e0b;
+    border-color: #d97706;
+    color: #171002;
+}
+
+.lab1-btn.reload:hover {
+    background: #fbbf24;
+}
+
+.lab1-btn.secondary {
+    background: #162033;
+    border-color: #2c3b57;
+    color: #e2e8f0;
+}
+
+.lab1-btn.secondary:hover {
+    background: #1e2d47;
+}
+
 /* Output Side */
 .output-side {
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     gap: 8px;
 }
 
 .output-frame {
-    width: 100%;
-    min-height: 150px;
-    background: #080d17;
-    border: 1px dashed #293852;
+    min-height: 145px;
+    background: #090d16;
+    border: 1px dashed #2b384e;
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -182,17 +259,17 @@ body.lab1-body {
 
 .output-image {
     max-width: 100%;
-    max-height: 240px;
+    max-height: 220px;
     border-radius: 8px;
     object-fit: contain;
-    cursor: zoom-in;
+    display: block;
     user-select: none;
     -webkit-user-select: none;
 }
 
 .output-placeholder {
     font-size: 12px;
-    color: #64748b;
+    color: #94a3b8;
     text-align: center;
     padding: 12px;
 }
@@ -207,75 +284,60 @@ body.lab1-body {
 
 .output-actions {
     display: flex;
+    align-items: center;
     gap: 8px;
     flex-wrap: wrap;
 }
 
-/* Buttons */
-.lab1-btn {
-    border: none;
-    border-radius: 8px;
-    padding: 8px 13px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    color: #ffffff;
-    background: #2563eb;
-    transition: opacity 0.15s ease;
-}
-
-.lab1-btn:hover {
-    opacity: 0.92;
-}
-
-.lab1-btn.small {
-    padding: 6px 11px;
-    font-size: 11px;
-}
-
-.lab1-btn.secondary {
-    background: #1e293b;
-    color: #e2e8f0;
-    border: 1px solid #334155;
-}
-
-.lab1-btn.go {
-    background: #16a34a;
-}
-
-.lab1-btn.reload {
-    background: #d97706;
-}
-
-/* Full-HD Zoom Modal */
+/* Zoom Modal */
 .zoom-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.92);
-    z-index: 99999;
+    z-index: 999;
+    background: rgba(2, 6, 23, 0.88);
+    backdrop-filter: blur(6px);
+    display: flex;
     align-items: center;
     justify-content: center;
     padding: 16px;
 }
 
-.zoom-modal-image {
-    max-width: 96%;
-    max-height: 90vh;
-    border-radius: 10px;
-    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.8);
+.zoom-modal-card {
+    position: relative;
+    max-width: 92vw;
+    max-height: 88vh;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.zoom-modal-img {
+    max-width: 100%;
+    max-height: 80vh;
+    border-radius: 8px;
+    object-fit: contain;
 }
 
 .zoom-close-btn {
-    position: fixed;
-    top: 16px;
-    right: 18px;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
     border: 1px solid #475569;
     background: #1e293b;
-    color: #fff;
-    font-size: 16px;
+    color: #f8fafc;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
+}
+
+.zoom-close-btn:hover {
+    background: #ef4444;
+    border-color: #dc2626;
 }

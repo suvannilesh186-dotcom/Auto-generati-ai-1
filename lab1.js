@@ -53,8 +53,6 @@ function loadLabDataForSession(currentSessionId) {
     if (map[currentSessionId] && map[currentSessionId].data) {
         return map[currentSessionId].data;
     }
-
-    // જે સેશન ખોલ્યું છે તેમાં ડેટા ન હોય તો ખાલી રાખો — બીજા સેશનનો ડેટા ન ઉઠાવો
     return { characters: [], photos: [], scenes: [] };
 }
 
@@ -109,7 +107,7 @@ function attachPressAndHoldZoom(imgEl, getSrcFn) {
     imgEl.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
-async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '') {
+async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefUrls = []) {
     const endpoint =
         localStorage.getItem('agc_gpu_render_url') ||
         localStorage.getItem('baseUrl') ||
@@ -129,7 +127,8 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '') {
         body: JSON.stringify({
             kind,
             prompt: promptText,
-            referenceImage: refImageUrl || null
+            referenceImage: refImageUrl || null,
+            referenceImages: Array.isArray(allRefUrls) ? allRefUrls : (refImageUrl ? [refImageUrl] : [])
         })
     });
 
@@ -146,28 +145,61 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '') {
 }
 
 function syncReferenceImagesToScenes() {
-    const availableRefs = labData.characters.map((c) => c.imageUrl).filter(Boolean);
+    const charItemsWithImg = labData.characters.filter((c) => Boolean(c.imageUrl));
+    const charRefs = charItemsWithImg.map((c) => c.imageUrl);
+    const scenePhotos = labData.photos.map((p) => p.imageUrl).filter(Boolean);
 
+    const findBestRefForText = (promptText = '', fallbackIdx = 0) => {
+        if (!charItemsWithImg.length) return '';
+        const lowerPrompt = (promptText || '').toLowerCase();
+
+        for (const ch of charItemsWithImg) {
+            const cleanLabel = (ch.label || '')
+                .replace(/^स्टेप\s*\d+\s*:\s*/i, '')
+                .replace(/^character\s*\d*\s*:\s*/i, '')
+                .split('(')[0]
+                .trim()
+                .toLowerCase();
+
+            if (cleanLabel && cleanLabel.length >= 2 && lowerPrompt.includes(cleanLabel)) {
+                return ch.imageUrl;
+            }
+        }
+
+        return charRefs[fallbackIdx % charRefs.length] || '';
+    };
+
+    // 1 -> 2: Character Reference Photos -> Scene Photo Studio
     labData.photos.forEach((ph, idx) => {
-        if (availableRefs.length > 0) {
-            const pickIdx = typeof ph.refIndex === 'number' && ph.refIndex < availableRefs.length
-                ? ph.refIndex
-                : idx % availableRefs.length;
-            ph.activeRefUrl = availableRefs[pickIdx];
+        ph.allRefUrls = charRefs;
+        if (ph.manualRefUrl) {
+            ph.activeRefUrl = ph.manualRefUrl;
+        } else if (typeof ph.refIndex === 'number' && labData.characters[ph.refIndex]?.imageUrl) {
+            ph.activeRefUrl = labData.characters[ph.refIndex].imageUrl;
         } else {
-            ph.activeRefUrl = '';
+            ph.activeRefUrl = findBestRefForText(ph.prompt, idx);
         }
     });
 
+    // 2 -> 3: Scene Photos -> Scene Video Studio
     labData.scenes.forEach((sc, idx) => {
-        if (availableRefs.length > 0) {
-            const pickIdx = typeof sc.refIndex === 'number' && sc.refIndex < availableRefs.length
-                ? sc.refIndex
-                : idx % availableRefs.length;
-            sc.activeRefUrl = availableRefs[pickIdx];
-        } else {
-            sc.activeRefUrl = '';
+        const sceneNumMatch = (sc.label || '').match(/सीन\s*(\d+)|scene\s*(\d+)/i);
+        const parsedSceneNum = sceneNumMatch ? parseInt(sceneNumMatch[1] || sceneNumMatch[2], 10) : NaN;
+
+        let matchedPhotoUrl = '';
+        if (sc.manualRefUrl) {
+            matchedPhotoUrl = sc.manualRefUrl;
+        } else if (!Number.isNaN(parsedSceneNum) && parsedSceneNum >= 1 && labData.photos[parsedSceneNum - 1]?.imageUrl) {
+            matchedPhotoUrl = labData.photos[parsedSceneNum - 1].imageUrl;
+        } else if (labData.photos[idx]?.imageUrl) {
+            matchedPhotoUrl = labData.photos[idx].imageUrl;
+        } else if (scenePhotos.length > 0) {
+            matchedPhotoUrl = scenePhotos[idx % scenePhotos.length];
         }
+
+        sc.sourcePhotoUrl = matchedPhotoUrl;
+        sc.allRefUrls = charRefs;
+        sc.activeRefUrl = matchedPhotoUrl || findBestRefForText(sc.prompt, idx);
     });
 }
 
@@ -226,6 +258,49 @@ function createStudioRow(item, kind, onUpdate) {
     actionBar.appendChild(reloadBtn);
     actionBar.appendChild(countdownSpan);
 
+    if (kind === 'photo' || kind === 'scene') {
+        const refWrap = document.createElement('div');
+        refWrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;margin-left:4px;';
+
+        const thumb = document.createElement('img');
+        thumb.alt = 'Ref';
+        thumb.style.cssText = 'width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #3b82f6;display:none;cursor:pointer;';
+        if (item.activeRefUrl) {
+            thumb.src = item.activeRefUrl;
+            thumb.style.display = 'inline-block';
+            thumb.addEventListener('click', () => openZoomModal(item.activeRefUrl));
+        }
+
+        const picker = document.createElement('select');
+        picker.style.cssText = 'background:#0b1220;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:4px 6px;font-size:11px;max-width:140px;';
+
+        const autoOpt = document.createElement('option');
+        autoOpt.value = '__AUTO__';
+        autoOpt.textContent = 'Auto Ref';
+        picker.appendChild(autoOpt);
+
+        const sourcePool = kind === 'photo' ? labData.characters : labData.photos;
+        sourcePool.forEach((srcItem, sIdx) => {
+            if (srcItem.imageUrl) {
+                const opt = document.createElement('option');
+                opt.value = srcItem.imageUrl;
+                opt.textContent = `${sIdx + 1}. ${srcItem.label || `Item ${sIdx + 1}`}`;
+                picker.appendChild(opt);
+            }
+        });
+
+        picker.value = item.manualRefUrl || '__AUTO__';
+        picker.addEventListener('change', () => {
+            item.manualRefUrl = picker.value === '__AUTO__' ? '' : picker.value;
+            persistLabData();
+            onUpdate();
+        });
+
+        refWrap.appendChild(thumb);
+        refWrap.appendChild(picker);
+        actionBar.appendChild(refWrap);
+    }
+
     promptSide.appendChild(labelRow);
     promptSide.appendChild(textarea);
     promptSide.appendChild(actionBar);
@@ -279,7 +354,7 @@ function createStudioRow(item, kind, onUpdate) {
             p.textContent =
                 kind === 'char' ? 'GO दबाएं — रेफरेंस फोटो यहाँ आएगा।' :
                 kind === 'photo' ? 'रेफरेंस फोटो व सीन प्रॉम्प्ट तैयार — GO दबाएं।' :
-                'रेफरेंस फोटो व वीडियो प्रॉम्प्ट तैयार — GO दबाएं।';
+                'सीन फोटो व वीडियो प्रॉम्प्ट तैयार — GO दबाएं।';
             frame.appendChild(p);
         }
     }
@@ -332,7 +407,8 @@ function createStudioRow(item, kind, onUpdate) {
             const outUrl = await callGpuRenderEndpoint(
                 promptVal,
                 renderKind,
-                item.activeRefUrl || ''
+                item.activeRefUrl || '',
+                item.allRefUrls || []
             );
             item.imageUrl = outUrl;
             item.status = 'done';
@@ -380,6 +456,7 @@ function createStudioRow(item, kind, onUpdate) {
 
 function renderAllSections() {
     syncReferenceImagesToScenes();
+    persistLabData();
 
     const charContainer = document.getElementById('charRefRowsContainer');
     const photoContainer = document.getElementById('scenePhotoRowsContainer');
@@ -427,6 +504,71 @@ function renderAllSections() {
         }
     }
 }
+
+async function waitForSectionCompletion(itemsList, timeoutMs = 180000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+        const withPrompts = itemsList.filter((it) => (it.prompt || '').trim().length > 0);
+        if (!withPrompts.length) return true;
+        if (withPrompts.every((it) => it.status === 'done' && Boolean(it.imageUrl))) {
+            return true;
+        }
+        await new Promise((r) => setTimeout(r, 800));
+    }
+    return false;
+}
+
+function triggerAllGoInContainer(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const goButtons = Array.from(container.querySelectorAll('.lab1-btn.go'));
+    goButtons.forEach((btn) => btn.click());
+}
+
+async function runCharGoAllAutoChain() {
+    triggerAllGoInContainer('charRefRowsContainer');
+    const charsReady = await waitForSectionCompletion(labData.characters);
+    if (!charsReady) return;
+
+    renderAllSections();
+    await new Promise((r) => setTimeout(r, 300));
+
+    if (labData.photos.some((p) => (p.prompt || '').trim())) {
+        triggerAllGoInContainer('scenePhotoRowsContainer');
+        const photosReady = await waitForSectionCompletion(labData.photos);
+        if (!photosReady) return;
+
+        renderAllSections();
+        await new Promise((r) => setTimeout(r, 300));
+
+        if (labData.scenes.some((s) => (s.prompt || '').trim())) {
+            triggerAllGoInContainer('sceneVideoRowsContainer');
+        }
+    }
+}
+
+async function runPhotoGoAllAutoChain() {
+    renderAllSections();
+    triggerAllGoInContainer('scenePhotoRowsContainer');
+    const photosReady = await waitForSectionCompletion(labData.photos);
+    if (!photosReady) return;
+
+    renderAllSections();
+    await new Promise((r) => setTimeout(r, 300));
+
+    if (labData.scenes.some((s) => (s.prompt || '').trim())) {
+        triggerAllGoInContainer('sceneVideoRowsContainer');
+    }
+}
+
+function runVideoGoAllAutoChain() {
+    renderAllSections();
+    triggerAllGoInContainer('sceneVideoRowsContainer');
+}
+
+document.getElementById('goAllCharBtn')?.addEventListener('click', runCharGoAllAutoChain);
+document.getElementById('goAllPhotoBtn')?.addEventListener('click', runPhotoGoAllAutoChain);
+document.getElementById('goAllVideoBtn')?.addEventListener('click', runVideoGoAllAutoChain);
 
 document.getElementById('backToDashBtn')?.addEventListener('click', () => {
     window.location.assign('dashboard.html');
