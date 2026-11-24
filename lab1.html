@@ -3,11 +3,41 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AGC.AI - Lab 1</title>
+    <title>AGC.AI - GPU Lab 1</title>
     <link rel="stylesheet" href="lab1.css" />
 </head>
 <body class="lab1-body">
-    <main id="lab1Canvas" class="lab1-canvas"></main>
+    <div id="lab1Canvas" class="lab1-canvas">
+        <header class="lab1-topbar">
+            <button id="backToDashBtn" class="lab1-btn secondary" type="button">← Dashboard</button>
+            <div class="lab1-title">⚡ GPU LAB</div>
+            <span id="lab1SessionTag" class="lab1-session-tag">48h Cache</span>
+        </header>
+
+        <!-- Section 1: Character Reference Photos -->
+        <section class="lab1-section" id="charRefSection">
+            <div class="section-head">
+                <h2>🎭 Character Reference Studio</h2>
+                <button id="addCharRowBtn" class="lab1-btn small" type="button">+ Add Character</button>
+            </div>
+            <div id="charRefRowsContainer" class="rows-container"></div>
+        </section>
+
+        <!-- Section 2: Scene Video Prompts & Renders (Scroll Down) -->
+        <section class="lab1-section" id="sceneVideoSection">
+            <div class="section-head">
+                <h2>🎬 Scene Video Studio</h2>
+                <button id="addSceneRowBtn" class="lab1-btn small" type="button">+ Add Scene Step</button>
+            </div>
+            <div id="sceneVideoRowsContainer" class="rows-container"></div>
+        </section>
+    </div>
+
+    <!-- Full-HD Zoom Modal on Press & Hold -->
+    <div id="zoomModalOverlay" class="zoom-modal-overlay" style="display: none;">
+        <button id="closeZoomModalBtn" class="zoom-close-btn" type="button">✕</button>
+        <img id="zoomModalImage" class="zoom-modal-image" alt="Full HD Preview" />
+    </div>
 
     <script type="module" src="lab1.js"></script>
 </body>
