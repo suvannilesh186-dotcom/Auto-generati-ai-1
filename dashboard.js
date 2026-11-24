@@ -257,11 +257,24 @@ ${charRefPromptsText}`;
 function extractCleanPromptOnly(blockText) {
     return (blockText || '')
         .replace(/^#+\s*.*$/gm, '')
-        .replace(/^(?:Scene\s*\d+.*|सीन\s*\d+.*|Character\s*\d+.*|Voiceover\/Dialogue.*|संवाद.*):?.*$/gim, '')
-        .replace(/^\s*[-*•]\s*(?:Scene|सीन|Character|किरदार|Voiceover|Dialogue|संवाद)\b.*$/gim, '')
-        .replace(/^(?:-\s*)?(?:\*\*?)?(?:Step\s*\d+|Prompt\s*\d+|प्रॉम्प्ट\s*\d+)(?:\*\*?)?\s*:?\s*/gim, '')
-        .replace(/^["“]|["”]$/g, '')
+        .replace(/^(?:Scene\s*\d+.*|सीन\s*\d+.*|Setting:.*|Character Action.*|Voiceover\/Dialogue.*|संवाद.*):?.*$/gim, '')
+        .replace(/^(?:-\s*)?\*\*?(?:Step\s*\d+|Prompt\s*\d+|प्रॉम्प्ट\s*\d+)\*\*?\s*:?\s*/gim, '')
+        .replace(/^["“”]+|["“”]+$/g, '')
         .trim();
+}
+
+function isNotApplicablePrompt(text) {
+    const t = (text || '').trim().toLowerCase();
+    return (
+        !t ||
+        t === 'none' ||
+        t.startsWith('n/a') ||
+        t.includes('no villain character') ||
+        t.includes('no supporting characters') ||
+        t.includes('no animal characters') ||
+        t.includes('no reference photo is needed') ||
+        t.includes('कोई विशिष्ट किरदार नहीं')
+    );
 }
 
 function parsePromptBlocks(rawAiText) {
@@ -272,7 +285,7 @@ function parsePromptBlocks(rawAiText) {
 
     const pushBlock = () => {
         const clean = extractCleanPromptOnly(currentText);
-        if (clean && !/^none$/i.test(clean) && !/no reference photo is needed/i.test(clean)) {
+        if (!isNotApplicablePrompt(clean)) {
             blocks.push({
                 label: currentLabel || `Prompt #${blocks.length + 1}`,
                 prompt: clean
@@ -283,27 +296,28 @@ function parsePromptBlocks(rawAiText) {
     };
 
     lines.forEach((line) => {
-        const charHeader = line.match(/^(?:\d+[\.\)]\s*)?\*\*?(?:Hero\s*\/\s*Lead|Villain\s*\/\s*Antagonist|Supporting|Animal|Character(?:\s*\d+)?)\s*:?\s*(.*?)\*\*?$/i);
-        const stepLine = line.match(/^(?:-\s*)?\*\*?(?:Step\s*\d+|Prompt\s*\d+|प्रॉम्प्ट\s*\d+)\*\*?\s*:?\s*(.+)$/i);
+        const charHeader = line.match(/^(?:\d+[\.\)]\s*)?\*\*?(Hero\s*\/\s*Lead|Villain\s*\/\s*Antagonist|Supporting|Animal|Character(?:\s*\d+)?)\b[^*]*\*?\*?\s*:?\s*(.*)$/i);
+        const stepLine = line.match(/^(?:-\s*)?\*\*?(Step\s*\d+|Prompt\s*\d+|प्रॉम्प्ट\s*\d+)\*\*?\s*:?\s*(.*)$/i);
+        const quotedLine = line.match(/^["“](.+)["”]$/);
 
         if (charHeader) {
-            if (currentText || currentLabel) pushBlock();
-            currentLabel = (charHeader[1] || line.replace(/\*+/g, '').trim()).slice(0, 45);
-        } else if (stepLine) {
-            if (currentText || currentLabel) pushBlock();
-            const stepTitleMatch = line.match(/(?:Step\s*\d+|Prompt\s*\d+|प्रॉम्प्ट\s*\d+)/i);
-            currentLabel = stepTitleMatch ? stepTitleMatch[0] : `Prompt #${blocks.length + 1}`;
-            currentText = stepLine[1];
-        } else if (/^-\s+/.test(line) && !currentLabel) {
             if (currentText) pushBlock();
-            currentLabel = `Prompt #${blocks.length + 1}`;
-            currentText = line.replace(/^-\s+/, '');
-        } else if (currentText || currentLabel) {
-            currentText += (currentText ? ' ' : '') + line;
+            currentLabel = line.replace(/^\d+[\.\)]\s*|\*+/g, '').replace(/:$/, '').trim();
+            if (charHeader[2] && charHeader[2].trim()) {
+                currentText = charHeader[2].trim();
+            }
+        } else if (stepLine) {
+            if (currentText) pushBlock();
+            currentLabel = stepLine[1].replace(/\*+/g, '').trim();
+            currentText = stepLine[2] || '';
+        } else if (quotedLine && !currentText) {
+            currentText = quotedLine[1];
+        } else if (currentText) {
+            currentText += ' ' + line;
         }
     });
 
-    if (currentText || currentLabel) pushBlock();
+    if (currentText) pushBlock();
     return blocks;
 }
 
@@ -314,25 +328,26 @@ function renderSeparatePromptCards(rawAiText, kind) {
     const blocks = parsePromptBlocks(rawAiText);
     blocks.forEach((item, idx) => {
         const card = document.createElement('div');
-        card.className = 'message ai-message';
-        card.style.cssText = 'margin-top:6px;margin-bottom:10px;padding:10px 12px;';
+        card.className = 'message ai-message separate-prompt-card';
+        card.style.cssText = 'margin:8px 0 12px 0;padding:12px 14px;border-radius:10px;border:1px solid #2b384e;background:#101622;';
 
         const titleEl = document.createElement('div');
-        titleEl.style.cssText = 'font-size:11px;color:#58a6ff;font-weight:700;margin-bottom:4px;';
-        titleEl.textContent = `${kind === 'char' ? 'Character' : 'Video'} ${idx + 1}: ${item.label}`;
+        titleEl.style.cssText = 'font-size:12px;color:#58a6ff;font-weight:700;margin-bottom:6px;';
+        titleEl.textContent = `${kind === 'char' ? '🎭 Ref Prompt' : '🎬 Video Prompt'} ${idx + 1} — ${item.label}`;
 
         const bodyEl = document.createElement('div');
-        bodyEl.style.cssText = 'font-size:13px;line-height:1.45;color:#f8fafc;white-space:pre-wrap;';
+        bodyEl.style.cssText = 'font-size:13px;line-height:1.5;color:#f8fafc;white-space:pre-wrap;background:#090d14;padding:8px 10px;border-radius:8px;border:1px solid #1e293b;';
         bodyEl.textContent = item.prompt;
 
         const copyBtn = document.createElement('button');
         copyBtn.type = 'button';
         copyBtn.className = 'copy-msg-btn';
-        copyBtn.textContent = `📋 Copy ${idx + 1}`;
+        copyBtn.style.marginTop = '8px';
+        copyBtn.textContent = `📋 Copy Prompt ${idx + 1}`;
         copyBtn.onclick = () => {
             navigator.clipboard.writeText(item.prompt).then(() => {
                 copyBtn.textContent = `✅ Copied ${idx + 1}`;
-                setTimeout(() => { copyBtn.textContent = `📋 Copy ${idx + 1}`; }, 1600);
+                setTimeout(() => { copyBtn.textContent = `📋 Copy Prompt ${idx + 1}`; }, 1600);
             });
         };
 
