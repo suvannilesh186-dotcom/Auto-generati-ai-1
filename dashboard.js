@@ -43,7 +43,6 @@ function getFullChatHistoryMap() {
             }
         });
 
-        // Purane 48h se zyada purane agc_recent_project_ keys bhi saaf karein
         Object.keys(localStorage).forEach((k) => {
             if (k.startsWith('agc_recent_project_')) {
                 try {
@@ -221,34 +220,46 @@ function ensureCharacterRefMasterSettingToggle() {
     targetContainer.appendChild(row);
 }
 
+// ==========================================
+// 📝 Prompt Builders (English Prompts + Hindi Story/Dialogue Context)
+// ==========================================
 function buildCharacterReferencePrompt(sceneSplitText) {
-    return `[AUTO_CHARACTER_REF_PROMPT]: नीचे दी गई सीन-बाय-सीन स्क्रिप्ट के सभी किरदारों की श्रेणी पहचानकर (Hero / Villain / Supporting / Animal) प्रत्येक किरदार के लिए 4–5 अलग-अलग फ़ोटो के बजाय केवल **एक मुख्य रेफरेंस फ़ोटो (Single Master Reference Photo)** का प्रॉम्प्ट तैयार करें।
+    return `[AUTO_CHARACTER_REF_PROMPT]: Analyze the scene-by-scene script below, identify all characters by role (Hero / Villain / Supporting / Animal), and generate clean, high-consistency character reference photo prompts strictly in ENGLISH.
 
-नियम:
-- Hero / Lead: स्पष्ट, दमदार और उच्च-गुणवत्ता (sharp facial clarity, consistent look & outfit) वाली 1 रेफरेंस फ़ोटो।
-- Villain / Antagonist: तीखे एक्सप्रेशन और विशिष्ट लुक/पहनावे के साथ 1 हाई-क्वालिटी रेफरेंस फ़ोटो।
-- Supporting: सुसंगत लुक व कपड़ों के साथ 1 रेफरेंस फ़ोटो।
-- Animal: प्रजाति/नस्ल, रंग, फर/त्वचा की बनावट और आकार स्पष्ट रखते हुए 1 रेफरेंस फ़ोटो।
-- पूरा आउटपुट स्पष्ट HINDI में हो।
+Strict Rules:
+1. Generate ONLY ONE Single Master Reference Photo prompt per character (do NOT create 4–5 separate photos per character) so the same master reference image preserves identity and look across upcoming scenes.
+2. Apply category-specific quality and look instructions:
+   - Hero / Lead: Sharp facial clarity, expressive and charismatic look, clean lighting, consistent outfit and hairstyle, high-detail reference photo.
+   - Villain / Antagonist: Distinct, sharp or intimidating expression, memorable look and outfit, high-detail reference photo.
+   - Supporting: Natural, clear, consistent appearance and clothing matching the story.
+   - Animal: Accurate species/breed, fur or skin texture, body proportions, and distinctive visual traits in crisp detail.
+3. Do NOT mix a single scene's temporary action into the master reference photo prompt.
+4. Write EVERY reference photo prompt strictly in ENGLISH.
 
 ---
+Scene-by-Scene Script:
 ${sceneSplitText}
 ---`;
 }
 
 function buildDynamicSceneVideoPrompts(sceneSplitText, charRefPromptsText) {
-    return `[AUTO_SCENE_VIDEO_PROMPTS]: नीचे दी गई सीन-बाय-सीन स्क्रिप्ट और कैरेक्टर रेफरेंस प्रॉम्प्ट्स के आधार पर, प्रत्येक सीन की रेफरेंस फ़ोटो से आगे का वीडियो बनाने के लिए सीन-वाइज वीडियो प्रॉम्प्ट्स तैयार करें।
+    return `[AUTO_SCENE_VIDEO_PROMPTS]: Using the scene-by-scene script and character reference photo prompts below, generate scene-wise step-by-step video prompts to turn each scene's reference photo into sequential video clips.
 
-नियम:
-- कोई फिक्स्ड संख्या नहीं रखनी है। हर सीन की लंबाई, डायलॉग्स और एक्शन के हिसाब से AI खुद तय करे कि कितने प्रॉम्प्ट्स (जैसे 1, 2, 3, 10, 15, 20, 30 या अधिक) बनाने हैं।
-- लंबे सीन या अधिक डायलॉग्स में उसी रेफरेंस फ़ोटो से आगे बढ़ाते हुए क्रमिक प्रॉम्प्ट्स बनाएं।
-- हर प्रॉम्प्ट में सीन नंबर, डायलॉग/क्रम, कैरेक्टर कंसिस्टेंसी, कैमरा मूवमेंट और सिंगल एक्शन स्पष्ट HINDI में लिखें।
+Language & Structure Rules:
+1. Keep the scene heading, scene context, and character dialogue/voiceover in HINDI so the story flow remains clear.
+2. Write EVERY video prompt strictly in ENGLISH so the video generation AI executes it accurately.
+3. Group prompts under each scene (Scene 1 -> Step 1, Step 2, Step 3...; Scene 2 -> Step 1, Step 2...; and so on).
+4. NO fixed prompt count: Do NOT hardcode a fixed number of steps or clips. Based on each scene's duration, dialogue length, and action progression (for example, when a single reference image is animated across a longer scene like a 2-minute scene in ~10-second video generations), automatically generate as many sequential steps (Step 1, Step 2, Step 3, ...) as needed to cover the full scene and dialogue smoothly without cutting off early.
+5. In each English video prompt, clearly specify:
+   - Reference image consistency (keep character face, hair, outfit, and proportions identical to the master reference image)
+   - Exact Step progression within that Scene
+   - Single clear physical action, facial expression, and camera movement
 
 ---
-सीन स्क्रिप्ट:
+Scene-by-Scene Script:
 ${sceneSplitText}
 
-कैरेक्टर रेफरेंस प्रॉम्प्ट्स:
+Character Reference Prompts:
 ${charRefPromptsText}
 ---`;
 }
@@ -388,7 +399,6 @@ if (menuToggleBtn && sidebar) {
     });
 }
 
-// GPU Lab बटन: बिना लॉगआउट किए सीधे lab1.html खोलेगा
 const openGpuLabBtn = document.getElementById('openGpuLabBtn');
 if (openGpuLabBtn) {
     openGpuLabBtn.addEventListener('click', (e) => {
@@ -567,7 +577,7 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
                     body: JSON.stringify({
                         model: model,
                         messages: [
-                            { role: "system", content: "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and highly engaging scripts with full character dialogues in HINDI." },
+                            { role: "system", content: "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and highly engaging scripts with full character dialogues in HINDI. Whenever a prompt asks for image reference prompts or video prompts in ENGLISH, write those prompts strictly in ENGLISH while keeping story/scene descriptions and dialogues in HINDI as instructed." },
                             { role: "user", content: text }
                         ],
                         temperature: 0.7,
