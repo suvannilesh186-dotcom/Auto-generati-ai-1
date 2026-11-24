@@ -18,6 +18,7 @@ let latestScenePhotoPromptsText = '';
 const CHAR_REF_TOGGLE_KEY = 'agc_char_ref_prompts_active';
 const FULL_CHAT_ARCHIVE_KEY = 'agc_full_chat_history_48h';
 const LAB1_STATE_KEY = 'agc_gpu_lab1_state_48h';
+const ACTIVE_SESSION_KEY = 'agc_active_session_id';
 const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
 
 const loaderMessages = [
@@ -58,6 +59,8 @@ function renderSavedSessionIntoChat(sessionObj) {
     if (!chatBox || !sessionObj || !Array.isArray(sessionObj.messages)) return;
 
     activeSessionId = sessionObj.sessionId || ('session_' + Date.now());
+    localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
+
     currentSessionMessages = [...sessionObj.messages];
     chatBox.innerHTML = '';
 
@@ -122,6 +125,8 @@ window.updateSidebarList = updateSidebarList;
 
 function saveFullChatTurn(sender, text, phaseTag = '') {
     if (!text) return;
+    localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
+
     currentSessionMessages.push({
         sender,
         text,
@@ -309,7 +314,6 @@ function parsePromptBlocks(rawAiText) {
 
     if (blocks.length > 0) return blocks;
 
-    // Fallback for Step / bullet lines if AI didn't write "Prompt:"
     let currentLabel = '';
     let currentText = '';
     const flush = () => {
@@ -589,6 +593,8 @@ try {
 
             const chatMessages = document.getElementById('chatMessages');
             if (chatMessages && chatMessages.children.length === 0) {
+                localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
+                saveLab1AutoItems(activeSessionId, { characters: [], photos: [], scenes: [] });
                 const userName = user.displayName ? user.displayName.split(' ')[0] : 'Commander';
                 appendMessage(`Hi ${userName}! आज मैं आपकी क्या सहायता कर सकूं?`, 'ai', false, 'welcome', false);
             }
@@ -633,6 +639,7 @@ if (openGpuLabBtn) {
     openGpuLabBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
         window.location.assign('lab1.html');
     });
 }
@@ -970,10 +977,12 @@ window.addEventListener('message', (event) => {
         )
     ) {
         activeSessionId = 'session_' + Date.now();
+        localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
         currentSessionMessages = [];
         latestSplitScenesText = '';
         latestCharRefPromptsText = '';
         latestScenePhotoPromptsText = '';
+        saveLab1AutoItems(activeSessionId, { characters: [], photos: [], scenes: [] });
         executePromptTurn(event.data.prompt, 'story_generation');
     }
 });

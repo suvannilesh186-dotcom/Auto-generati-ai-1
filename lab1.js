@@ -1,11 +1,19 @@
 const LAB1_STATE_KEY = 'agc_gpu_lab1_state_48h';
 const FULL_CHAT_ARCHIVE_KEY = 'agc_full_chat_history_48h';
+const ACTIVE_SESSION_KEY = 'agc_active_session_id';
 const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
 const AUTO_RETRY_SECONDS = 10;
 
 const retryTimers = new Map();
 
 function getActiveOrLatestSessionId() {
+    try {
+        const explicitId = localStorage.getItem(ACTIVE_SESSION_KEY);
+        if (explicitId) {
+            return explicitId;
+        }
+    } catch (_) {}
+
     try {
         const raw = localStorage.getItem(FULL_CHAT_ARCHIVE_KEY);
         const parsed = raw ? JSON.parse(raw) : {};
@@ -46,18 +54,7 @@ function loadLabDataForSession(currentSessionId) {
         return map[currentSessionId].data;
     }
 
-    const latestEntry = Object.values(map)
-        .filter((e) => e && e.data && (
-            (e.data.characters && e.data.characters.length) ||
-            (e.data.photos && e.data.photos.length) ||
-            (e.data.scenes && e.data.scenes.length)
-        ))
-        .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
-
-    if (latestEntry && latestEntry.data) {
-        return latestEntry.data;
-    }
-
+    // જે સેશન ખોલ્યું છે તેમાં ડેટા ન હોય તો ખાલી રાખો — બીજા સેશનનો ડેટા ન ઉઠાવો
     return { characters: [], photos: [], scenes: [] };
 }
 
