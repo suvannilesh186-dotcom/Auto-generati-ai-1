@@ -13,6 +13,7 @@ let activeSessionId = 'session_' + Date.now();
 let currentSessionMessages = [];
 let latestSplitScenesText = '';
 let latestCharRefPromptsText = '';
+let latestScenePhotoPromptsText = '';
 
 const CHAR_REF_TOGGLE_KEY = 'agc_char_ref_prompts_active';
 const FULL_CHAT_ARCHIVE_KEY = 'agc_full_chat_history_48h';
@@ -163,7 +164,7 @@ function saveFullChatTurn(sender, text, phaseTag = '') {
 }
 
 // ==========================================
-// ⚙️ Master Setting Toggle for Character Ref & Scene Video Prompts
+// ⚙️ Master Setting Toggle for Character Ref, Scene Photo & Video Prompts
 // ==========================================
 function ensureCharacterRefMasterSettingToggle() {
     const settingsModal = document.getElementById('masterSettingsModal');
@@ -177,8 +178,8 @@ function ensureCharacterRefMasterSettingToggle() {
 
     const labelBox = document.createElement('div');
     labelBox.innerHTML = `
-        <div style="font-size:13px;font-weight:700;color:#fff;">🎭 Auto Character Ref & Video Prompts</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Scene Split के बाद Character Ref व Scene Video प्रॉम्प्ट्स</div>
+        <div style="font-size:13px;font-weight:700;color:#fff;">🎭 Auto Character Ref, Scene Photo & Video Prompts</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Scene Split के बाद Character Ref → Scene Photo → Scene Video प्रॉम्प्ट्स</div>
     `;
 
     const toggleBtn = document.createElement('button');
@@ -210,39 +211,33 @@ function ensureCharacterRefMasterSettingToggle() {
 }
 
 // ==========================================
-// 📝 Prompt Builders (English Prompts + Hindi Story/Dialogue Context)
+// 📝 Prompt Builders (Character Ref -> Scene Photo -> Scene Video)
 // ==========================================
 function buildCharacterReferencePrompt(sceneSplitText) {
     return `[AUTO_CHARACTER_REF_PROMPT]
-CRITICAL LANGUAGE RULE: Every image reference prompt MUST be 100% in ENGLISH.
+CRITICAL LANGUAGE RULE: Write EVERY reference photo prompt 100% in ENGLISH.
 
 Task:
-Analyze the scene-by-scene script below, identify every character/role (Hero / Villain / Supporting / Animal), and create ONE Single Master Reference Photo prompt per valid character/role so the same reference image keeps character identity consistent across scenes.
+Analyze the scene-by-scene script below and generate ONE Single Master Reference Photo prompt per valid character/role (Hero / Villain / Supporting / Animal) so character look, face, hair, and outfit stay consistent across scenes.
 
 Rules:
-1. Skip any role with no character (e.g. "None").
-2. Hero / Lead: Sharp facial clarity, expressive and charismatic look, clean lighting, consistent outfit and hairstyle, high-detail reference photo.
-3. Villain / Antagonist: Distinct, sharp or intimidating expression, memorable look and outfit, high-detail reference photo.
-4. Supporting: Natural, clear, consistent appearance and clothing matching the story.
-5. Animal: Accurate species/breed, fur or skin texture, body proportions, and distinctive visual traits in crisp detail.
-6. Write EVERY reference photo prompt strictly in ENGLISH.
+1. Skip any role with no character (e.g. "N/A" or "None").
+2. Format each valid prompt clearly with its label and prompt text in ENGLISH.
 
 Scene-by-Scene Script:
 ${sceneSplitText}`;
 }
 
-function buildDynamicSceneVideoPrompts(sceneSplitText, charRefPromptsText) {
-    return `[AUTO_SCENE_VIDEO_PROMPTS]
-CRITICAL LANGUAGE RULE:
-- Keep Scene heading, Scene summary, and Character Dialogue/Voiceover in HINDI.
-- Write EVERY Video Prompt (and every Step prompt inside a scene) 100% in ENGLISH.
+function buildScenePhotoPrompts(sceneSplitText, charRefPromptsText) {
+    return `[AUTO_SCENE_PHOTO_PROMPTS]
+CRITICAL LANGUAGE RULE: Write EVERY Scene Photo Prompt 100% in ENGLISH.
 
 Task:
-Group prompts scene by scene (Scene 1 -> Step 1, Step 2...; Scene 2 -> Step 1, Step 2...; and so on) so each scene's reference image can be animated step by step into video clips.
+Using the scene-by-scene script and character reference prompts below, generate separate still photo prompts for each scene/step incorporating the character reference details so the character's identity, outfit, and scene consistency are preserved before video generation.
 
 Rules:
-1. NO fixed prompt count: Automatically create as many sequential steps (Step 1, Step 2, Step 3, ...) per scene as needed for the full scene duration, dialogue, and action.
-2. Under each Scene, keep Hindi context/dialogue clear, and write each Step video prompt in ENGLISH with character consistency, action, expression, and camera movement.
+1. Keep character identity, face, hair, and attire consistent with the Character Reference Prompts.
+2. List each prompt clearly as Step 1, Step 2, Step 3... in ENGLISH.
 
 Scene-by-Scene Script:
 ${sceneSplitText}
@@ -251,13 +246,35 @@ Character Reference Prompts:
 ${charRefPromptsText}`;
 }
 
+function buildDynamicSceneVideoPrompts(sceneSplitText, charRefPromptsText, scenePhotoPromptsText) {
+    return `[AUTO_SCENE_VIDEO_PROMPTS]
+CRITICAL LANGUAGE RULE: Write EVERY Video Prompt 100% in ENGLISH.
+
+Task:
+Using the scene-by-scene script, character reference prompts, and scene photo prompts below, generate step-by-step video prompts (Step 1, Step 2, Step 3...) to animate the scene photos into video clips with character consistency, action, expression, and camera movement.
+
+Rules:
+1. Write each Step video prompt strictly in ENGLISH.
+2. Keep character appearance and scene continuity consistent.
+
+Scene-by-Scene Script:
+${sceneSplitText}
+
+Character Reference Prompts:
+${charRefPromptsText}
+
+Scene Photo Prompts:
+${scenePhotoPromptsText}`;
+}
+
 // ==========================================
 // 📋 Individual Prompt Cards with Separate Copy Buttons
 // ==========================================
 function extractCleanPromptOnly(blockText) {
     return (blockText || '')
         .replace(/^#+\s*.*$/gm, '')
-        .replace(/^(?:Scene\s*\d+.*|सीन\s*\d+.*|Setting:.*|Character Action.*|Voiceover\/Dialogue.*|संवाद.*):?.*$/gim, '')
+        .replace(/^(?:Scene\s*\d+.*|सीन\s*\d+.*|Setting\s*:.*|Character Action.*|Voiceover\s*\/?\s*Dialogue.*|संवाद.*):?.*$/gim, '')
+        .replace(/^(?:\*\*?)?(?:नरेटर|रोहन|आर्यन|दर्शक|पेंसिल|किरदार)[^:]*:\s*.*$/gim, '')
         .replace(/^(?:-\s*)?\*\*?(?:Step\s*\d+|Prompt\s*\d+|प्रॉम्प्ट\s*\d+)\*\*?\s*:?\s*/gim, '')
         .replace(/^["“”]+|["“”]+$/g, '')
         .trim();
@@ -277,6 +294,14 @@ function isNotApplicablePrompt(text) {
     );
 }
 
+function looksLikeCleanVisualPrompt(text) {
+    const clean = extractCleanPromptOnly(text);
+    if (!clean || isNotApplicablePrompt(clean)) return false;
+    const hasLatinLetters = /[a-zA-Z]{4,}/.test(clean);
+    const hasHindiDialogueMarkers = /Voiceover|Dialogue|संवाद|नरेटर|रोहन|आर्यन/i.test(text);
+    return hasLatinLetters && !hasHindiDialogueMarkers;
+}
+
 function parsePromptBlocks(rawAiText) {
     const lines = (rawAiText || '').split('\n').map((l) => l.trim()).filter(Boolean);
     const blocks = [];
@@ -285,9 +310,9 @@ function parsePromptBlocks(rawAiText) {
 
     const pushBlock = () => {
         const clean = extractCleanPromptOnly(currentText);
-        if (!isNotApplicablePrompt(clean)) {
+        if (looksLikeCleanVisualPrompt(clean)) {
             blocks.push({
-                label: currentLabel || `Prompt #${blocks.length + 1}`,
+                label: currentLabel || `Prompt ${blocks.length + 1}`,
                 prompt: clean
             });
         }
@@ -325,6 +350,11 @@ function renderSeparatePromptCards(rawAiText, kind) {
     const chatBox = document.getElementById('chatMessages');
     if (!chatBox || !rawAiText) return;
 
+    const tagPrefix =
+        kind === 'char' ? 'Ref Prompt' :
+        kind === 'photo' ? 'Scene Photo Prompt' :
+        'Video Prompt';
+
     const blocks = parsePromptBlocks(rawAiText);
     blocks.forEach((item, idx) => {
         const card = document.createElement('div');
@@ -333,7 +363,7 @@ function renderSeparatePromptCards(rawAiText, kind) {
 
         const titleEl = document.createElement('div');
         titleEl.style.cssText = 'font-size:12px;color:#58a6ff;font-weight:700;margin-bottom:6px;';
-        titleEl.textContent = `${kind === 'char' ? '🎭 Ref Prompt' : '🎬 Video Prompt'} ${idx + 1} — ${item.label}`;
+        titleEl.textContent = `${tagPrefix} ${idx + 1} — ${item.label}`;
 
         const bodyEl = document.createElement('div');
         bodyEl.style.cssText = 'font-size:13px;line-height:1.5;color:#f8fafc;white-space:pre-wrap;background:#090d14;padding:8px 10px;border-radius:8px;border:1px solid #1e293b;';
@@ -343,11 +373,11 @@ function renderSeparatePromptCards(rawAiText, kind) {
         copyBtn.type = 'button';
         copyBtn.className = 'copy-msg-btn';
         copyBtn.style.marginTop = '8px';
-        copyBtn.textContent = `📋 Copy Prompt ${idx + 1}`;
+        copyBtn.textContent = `📋 Copy ${idx + 1}`;
         copyBtn.onclick = () => {
             navigator.clipboard.writeText(item.prompt).then(() => {
                 copyBtn.textContent = `✅ Copied ${idx + 1}`;
-                setTimeout(() => { copyBtn.textContent = `📋 Copy Prompt ${idx + 1}`; }, 1600);
+                setTimeout(() => { copyBtn.textContent = `📋 Copy ${idx + 1}`; }, 1600);
             });
         };
 
@@ -740,10 +770,11 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
 
     const isPromptPhase =
         phaseWhenSent === 'character_ref_prompt' ||
+        phaseWhenSent === 'scene_photo_prompts' ||
         phaseWhenSent === 'scene_video_prompts';
 
     const systemInstruction = isPromptPhase
-        ? "You are AGC.AI Core. Keep story/scene context and dialogues in HINDI if requested, and write EVERY image reference prompt and EVERY video prompt strictly in natural, detailed ENGLISH."
+        ? "You are AGC.AI Core. Write EVERY prompt strictly in clean, detailed ENGLISH."
         : "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and engaging scripts with character dialogues in HINDI.";
 
     const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
@@ -802,12 +833,15 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
     if (finalResponse) {
         const isPromptOutput =
             phaseWhenSent === 'character_ref_prompt' ||
+            phaseWhenSent === 'scene_photo_prompts' ||
             phaseWhenSent === 'scene_video_prompts';
 
         appendMessage(finalResponse, 'ai', !isPromptOutput, phaseWhenSent, true);
 
         if (phaseWhenSent === 'character_ref_prompt') {
             renderSeparatePromptCards(finalResponse, 'char');
+        } else if (phaseWhenSent === 'scene_photo_prompts') {
+            renderSeparatePromptCards(finalResponse, 'photo');
         } else if (phaseWhenSent === 'scene_video_prompts') {
             renderSeparatePromptCards(finalResponse, 'video');
         }
@@ -831,7 +865,7 @@ ${finalResponse}
 
             setTimeout(() => {
                 executePromptTurn(splitPrompt, 'scene_splitting');
-            }, 1500);
+            }, 3000);
         } else if (phaseWhenSent === 'scene_splitting') {
             latestSplitScenesText = finalResponse;
             saveFullChatTurn('system', 'Scene split saved to 48h history.', 'scene_splitting_saved');
@@ -849,7 +883,20 @@ ${finalResponse}
 
             if (isCharRefToggleON) {
                 setTimeout(() => {
-                    executePromptTurn(buildDynamicSceneVideoPrompts(latestSplitScenesText, latestCharRefPromptsText), 'scene_video_prompts');
+                    executePromptTurn(buildScenePhotoPrompts(latestSplitScenesText, latestCharRefPromptsText), 'scene_photo_prompts');
+                }, 1500);
+            } else {
+                currentProcessPhase = 'idle';
+            }
+        } else if (phaseWhenSent === 'scene_photo_prompts') {
+            latestScenePhotoPromptsText = finalResponse;
+
+            if (isCharRefToggleON) {
+                setTimeout(() => {
+                    executePromptTurn(
+                        buildDynamicSceneVideoPrompts(latestSplitScenesText, latestCharRefPromptsText, latestScenePhotoPromptsText),
+                        'scene_video_prompts'
+                    );
                 }, 1500);
             } else {
                 currentProcessPhase = 'idle';
@@ -905,6 +952,7 @@ window.addEventListener('message', (event) => {
         currentSessionMessages = [];
         latestSplitScenesText = '';
         latestCharRefPromptsText = '';
+        latestScenePhotoPromptsText = '';
         executePromptTurn(event.data.prompt, 'story_generation');
     }
 });
