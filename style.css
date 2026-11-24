@@ -83,7 +83,6 @@ body.login-body {
     font-weight: bold;
 }
 
-
 /* --- Dashboard Body & Layout Styles --- */
 body.dashboard-body {
     background-color: #07090e;
@@ -104,7 +103,7 @@ body.dashboard-body {
     display: flex;
     align-items: center;
     padding: 0 15px;
-    gap: 15px;
+    gap: 12px;
     z-index: 100;
     flex-shrink: 0;
 }
@@ -121,6 +120,7 @@ body.dashboard-body {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .header-logo {
@@ -128,10 +128,37 @@ body.dashboard-body {
     font-weight: 800;
     color: #ffffff;
     letter-spacing: 1px;
+    white-space: nowrap;
 }
 
 .header-logo span {
     color: #58a6ff;
+}
+
+/* Right-Corner GPU Logo Button */
+.gpu-header-btn {
+    margin-left: auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #58a6ff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.gpu-header-btn:hover {
+    background: #1f2937;
+    border-color: #58a6ff;
+}
+
+.gpu-header-btn:active {
+    transform: scale(0.95);
 }
 
 /* Dashboard Container */
@@ -205,7 +232,7 @@ body.dashboard-body {
     word-break: break-all;
 }
 
-/* Master Setting Button Styles (Analytics के जैसी बिल्कुल परफ़ेक्ट स्टाइलिंग) */
+/* Master Setting Button Styles */
 .master-setting-btn-box {
     cursor: pointer;
     background: #161b22;
@@ -508,7 +535,6 @@ body.dashboard-body {
     flex-shrink: 0;
 }
 
-
 /* --- Master Setting Modal Styles --- */
 .master-modal-overlay {
     position: fixed;
@@ -565,7 +591,6 @@ body.dashboard-body {
     text-align: center;
     padding: 20px 0;
 }
-
 
 /* --- Compact & Transparent Gemini-style Inline AI Loader --- */
 .ai-loader.chat-inline-loader {

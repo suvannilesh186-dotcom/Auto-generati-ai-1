@@ -468,6 +468,13 @@ if (menuToggleBtn && sidebar) {
     });
 }
 
+const openGpuLabBtn = document.getElementById('openGpuLabBtn');
+if (openGpuLabBtn) {
+    openGpuLabBtn.addEventListener('click', () => {
+        window.location.href = 'lab1.html';
+    });
+}
+
 const handleYouTubePopupLogin = async () => {
     try {
         const provider = new GoogleAuthProvider();
