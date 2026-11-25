@@ -4,7 +4,12 @@ const ACTIVE_SESSION_KEY = 'agc_active_session_id';
 const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
 const AUTO_RETRY_SECONDS = 10;
 
+const GPU_ENDPOINT_STORAGE_KEY = 'agc_gpu_render_url';
+const GPU_API_KEY_STORAGE_KEY = 'apiKey';
+const GPU_META_STORAGE_KEY = 'agc_gpu_endpoint_meta_v1';
+
 const retryTimers = new Map();
+let activeGpuPopupPromise = null;
 
 function getActiveOrLatestSessionId() {
     try {
@@ -107,19 +112,281 @@ function attachPressAndHoldZoom(imgEl, getSrcFn) {
     imgEl.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
-async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefUrls = []) {
-    const endpoint =
-        localStorage.getItem('agc_gpu_render_url') ||
+// =========================================================
+// ONE-TIME GPU CONNECTION CONFIG & POPUP (API KEY OPTIONAL)
+// =========================================================
+
+function getSavedGpuEndpoint() {
+    return (
+        localStorage.getItem(GPU_ENDPOINT_STORAGE_KEY) ||
         localStorage.getItem('baseUrl') ||
-        '';
+        ''
+    ).trim();
+}
+
+function getSavedGpuMeta() {
+    try {
+        const raw = localStorage.getItem(GPU_META_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : { model: '', note: '' };
+    } catch (_) {
+        return { model: '', note: '' };
+    }
+}
+
+function saveGpuConnectionSettings({ endpointUrl, apiKey = '', model = '', note = '' }) {
+    const cleanUrl = (endpointUrl || '').trim();
+    const cleanKey = (apiKey || '').trim();
+    const cleanModel = (model || '').trim();
+    const cleanNote = (note || '').trim();
+
+    localStorage.setItem(GPU_ENDPOINT_STORAGE_KEY, cleanUrl);
+    if (cleanKey) {
+        localStorage.setItem(GPU_API_KEY_STORAGE_KEY, cleanKey);
+    } else {
+        localStorage.removeItem(GPU_API_KEY_STORAGE_KEY);
+    }
+
+    localStorage.setItem(
+        GPU_META_STORAGE_KEY,
+        JSON.stringify({ model: cleanModel, note: cleanNote })
+    );
+
+    return {
+        endpointUrl: cleanUrl,
+        apiKey: cleanKey,
+        model: cleanModel,
+        note: cleanNote
+    };
+}
+
+function openGpuConnectPopup(forceOpen = false) {
+    if (activeGpuPopupPromise) {
+        return activeGpuPopupPromise;
+    }
+
+    activeGpuPopupPromise = new Promise((resolve, reject) => {
+        const existing = document.getElementById('agcOneTimeGpuModal');
+        if (existing) existing.remove();
+
+        const currentEndpoint = getSavedGpuEndpoint();
+        const currentKey = localStorage.getItem(GPU_API_KEY_STORAGE_KEY) || '';
+        const currentMeta = getSavedGpuMeta();
+
+        if (!forceOpen && currentEndpoint) {
+            activeGpuPopupPromise = null;
+            resolve({
+                endpointUrl: currentEndpoint,
+                apiKey: currentKey,
+                model: currentMeta.model || '',
+                note: currentMeta.note || ''
+            });
+            return;
+        }
+
+        const overlay = document.createElement('div');
+        overlay.id = 'agcOneTimeGpuModal';
+        overlay.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.78);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            padding: 16px;
+            font-family: system-ui, -apple-system, sans-serif;
+        `;
+
+        overlay.innerHTML = `
+            <div style="
+                width: 100%;
+                max-width: 420px;
+                background: #0f172a;
+                color: #f8fafc;
+                border: 1px solid #334155;
+                border-radius: 14px;
+                padding: 20px;
+                box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+            ">
+                <div style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">
+                    GPU Connect (One-Time Setup)
+                </div>
+                <div style="font-size: 12px; color: #94a3b8; line-height: 1.45; margin-bottom: 14px;">
+                    GPU URL એકવાર સેવ કરી લો — ફરી-ફરી નાખવાની જરૂર નહીં પડે. API Key હમણાં જરૂરી નથી (ખાલી છોડી શકો છો).
+                </div>
+
+                <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">
+                    GPU Endpoint / Render URL *
+                </label>
+                <input
+                    id="agcGpuUrlInput"
+                    type="text"
+                    value="${currentEndpoint}"
+                    placeholder="https://your-gpu-endpoint/generate"
+                    style="
+                        width: 100%;
+                        box-sizing: border-box;
+                        padding: 10px 12px;
+                        margin-bottom: 10px;
+                        border-radius: 8px;
+                        border: 1px solid #475569;
+                        background: #020617;
+                        color: #f8fafc;
+                        font-size: 13px;
+                    "
+                />
+
+                <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">
+                    API Key (Optional — ન હોય તો ખાલી રાખો)
+                </label>
+                <input
+                    id="agcGpuKeyInput"
+                    type="text"
+                    value="${currentKey}"
+                    placeholder="Optional API Key / Token"
+                    style="
+                        width: 100%;
+                        box-sizing: border-box;
+                        padding: 10px 12px;
+                        margin-bottom: 10px;
+                        border-radius: 8px;
+                        border: 1px solid #475569;
+                        background: #020617;
+                        color: #f8fafc;
+                        font-size: 13px;
+                    "
+                />
+
+                <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">
+                    Model / Pod Note (Optional)
+                </label>
+                <input
+                    id="agcGpuModelInput"
+                    type="text"
+                    value="${currentMeta.model || ''}"
+                    placeholder="Optional model name or note"
+                    style="
+                        width: 100%;
+                        box-sizing: border-box;
+                        padding: 10px 12px;
+                        margin-bottom: 10px;
+                        border-radius: 8px;
+                        border: 1px solid #475569;
+                        background: #020617;
+                        color: #f8fafc;
+                        font-size: 13px;
+                    "
+                />
+
+                <div
+                    id="agcGpuPopupError"
+                    style="color: #f87171; font-size: 12px; min-height: 16px; margin-bottom: 10px;"
+                ></div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                    <button
+                        id="agcGpuCancelBtn"
+                        type="button"
+                        style="
+                            padding: 8px 14px;
+                            border-radius: 8px;
+                            border: 1px solid #475569;
+                            background: transparent;
+                            color: #cbd5e1;
+                            cursor: pointer;
+                            font-size: 13px;
+                        "
+                    >Cancel</button>
+                    <button
+                        id="agcGpuSaveBtn"
+                        type="button"
+                        style="
+                            padding: 8px 16px;
+                            border-radius: 8px;
+                            border: none;
+                            background: #2563eb;
+                            color: #ffffff;
+                            font-weight: 600;
+                            cursor: pointer;
+                            font-size: 13px;
+                        "
+                    >Save & Go</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const urlInput = document.getElementById('agcGpuUrlInput');
+        const keyInput = document.getElementById('agcGpuKeyInput');
+        const modelInput = document.getElementById('agcGpuModelInput');
+        const errBox = document.getElementById('agcGpuPopupError');
+        const cancelBtn = document.getElementById('agcGpuCancelBtn');
+        const saveBtn = document.getElementById('agcGpuSaveBtn');
+
+        const cleanup = () => {
+            overlay.remove();
+            activeGpuPopupPromise = null;
+        };
+
+        cancelBtn.addEventListener('click', () => {
+            cleanup();
+            reject(new Error('GPU connection cancelled.'));
+        });
+
+        const submitPopup = () => {
+            const rawUrl = (urlInput.value || '').trim();
+            if (!rawUrl) {
+                errBox.textContent = 'કૃપા કરીને GPU Endpoint URL નાખો.';
+                return;
+            }
+            if (!/^https?:\/\//i.test(rawUrl)) {
+                errBox.textContent = 'URL http:// અથવા https:// થી શરૂ થવો જોઈએ.';
+                return;
+            }
+
+            const saved = saveGpuConnectionSettings({
+                endpointUrl: rawUrl,
+                apiKey: keyInput.value || '',
+                model: modelInput.value || '',
+                note: currentMeta.note || ''
+            });
+
+            cleanup();
+            resolve(saved);
+        };
+
+        saveBtn.addEventListener('click', submitPopup);
+        urlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitPopup();
+            }
+        });
+
+        setTimeout(() => urlInput.focus(), 20);
+    });
+
+    return activeGpuPopupPromise;
+}
+
+async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefUrls = []) {
+    let endpoint = getSavedGpuEndpoint();
+    if (!endpoint) {
+        const cfg = await openGpuConnectPopup(false);
+        endpoint = cfg.endpointUrl;
+    }
 
     if (!endpoint) {
         throw new Error('GPU render endpoint set नहीं है।');
     }
 
-    const apiKey = localStorage.getItem('apiKey') || '';
+    const apiKey = (localStorage.getItem(GPU_API_KEY_STORAGE_KEY) || '').trim();
+    const meta = getSavedGpuMeta();
     const headers = { 'Content-Type': 'application/json' };
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+    if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+    }
 
     const res = await fetch(endpoint, {
         method: 'POST',
@@ -127,6 +394,7 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
         body: JSON.stringify({
             kind,
             prompt: promptText,
+            model: meta.model || undefined,
             referenceImage: refImageUrl || null,
             referenceImages: Array.isArray(allRefUrls) ? allRefUrls : (refImageUrl ? [refImageUrl] : [])
         })
@@ -137,11 +405,23 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
     }
 
     const data = await res.json();
-    const outUrl = data.imageUrl || data.url || data.output_url || '';
+    const outUrl =
+        data.imageUrl ||
+        data.videoUrl ||
+        data.content_url ||
+        data.url ||
+        data.output_url ||
+        (Array.isArray(data.output) ? data.output[0] : data.output) ||
+        '';
+
     if (!outUrl) {
         throw new Error('Render output URL प्राप्त नहीं हुआ।');
     }
     return outUrl;
+}
+
+function isVideoMediaUrl(url = '') {
+    return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
 }
 
 function syncReferenceImagesToScenes() {
@@ -342,12 +622,24 @@ function createStudioRow(item, kind, onUpdate) {
             errEl.textContent = item.errorMsg || 'GPU एरर आया।';
             frame.appendChild(errEl);
         } else if (item.imageUrl) {
-            const img = document.createElement('img');
-            img.className = 'output-image';
-            img.src = item.imageUrl;
-            img.alt = item.label;
-            attachPressAndHoldZoom(img, () => item.imageUrl);
-            frame.appendChild(img);
+            if (isVideoMediaUrl(item.imageUrl)) {
+                const vid = document.createElement('video');
+                vid.className = 'output-video';
+                vid.src = item.imageUrl;
+                vid.controls = true;
+                vid.autoplay = true;
+                vid.loop = true;
+                vid.muted = true;
+                vid.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:8px;';
+                frame.appendChild(vid);
+            } else {
+                const img = document.createElement('img');
+                img.className = 'output-image';
+                img.src = item.imageUrl;
+                img.alt = item.label;
+                attachPressAndHoldZoom(img, () => item.imageUrl);
+                frame.appendChild(img);
+            }
         } else {
             const p = document.createElement('div');
             p.className = 'output-placeholder';
@@ -393,6 +685,18 @@ function createStudioRow(item, kind, onUpdate) {
             return;
         }
 
+        if (!getSavedGpuEndpoint()) {
+            try {
+                await openGpuConnectPopup(false);
+            } catch (popupErr) {
+                item.status = 'error';
+                item.errorMsg = popupErr?.message || 'GPU URL સેવ કરવો જરૂરી છે.';
+                persistLabData();
+                paintOutput();
+                return;
+            }
+        }
+
         item.status = 'loading';
         item.errorMsg = '';
         persistLabData();
@@ -427,11 +731,18 @@ function createStudioRow(item, kind, onUpdate) {
     goBtn.addEventListener('click', runRender);
     reloadBtn.addEventListener('click', runRender);
 
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            runRender();
+        }
+    });
+
     downloadBtn.addEventListener('click', () => {
         if (!item.imageUrl) return;
         const a = document.createElement('a');
         a.href = item.imageUrl;
-        a.download = `${item.id}.png`;
+        a.download = isVideoMediaUrl(item.imageUrl) ? `${item.id}.mp4` : `${item.id}.png`;
         a.target = '_blank';
         a.click();
     });
@@ -518,6 +829,12 @@ async function waitForSectionCompletion(itemsList, timeoutMs = 180000) {
     return false;
 }
 
+async function ensureGpuReadyBeforeBatch() {
+    if (!getSavedGpuEndpoint()) {
+        await openGpuConnectPopup(false);
+    }
+}
+
 function triggerAllGoInContainer(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -526,6 +843,12 @@ function triggerAllGoInContainer(containerId) {
 }
 
 async function runCharGoAllAutoChain() {
+    try {
+        await ensureGpuReadyBeforeBatch();
+    } catch (_) {
+        return;
+    }
+
     triggerAllGoInContainer('charRefRowsContainer');
     const charsReady = await waitForSectionCompletion(labData.characters);
     if (!charsReady) return;
@@ -548,6 +871,12 @@ async function runCharGoAllAutoChain() {
 }
 
 async function runPhotoGoAllAutoChain() {
+    try {
+        await ensureGpuReadyBeforeBatch();
+    } catch (_) {
+        return;
+    }
+
     renderAllSections();
     triggerAllGoInContainer('scenePhotoRowsContainer');
     const photosReady = await waitForSectionCompletion(labData.photos);
@@ -561,72 +890,21 @@ async function runPhotoGoAllAutoChain() {
     }
 }
 
-function runVideoGoAllAutoChain() {
+async function runVideoGoAllAutoChain() {
+    try {
+        await ensureGpuReadyBeforeBatch();
+    } catch (_) {
+        return;
+    }
+
     renderAllSections();
     triggerAllGoInContainer('sceneVideoRowsContainer');
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    renderAllSections();
+});
+
 document.getElementById('goAllCharBtn')?.addEventListener('click', runCharGoAllAutoChain);
 document.getElementById('goAllPhotoBtn')?.addEventListener('click', runPhotoGoAllAutoChain);
 document.getElementById('goAllVideoBtn')?.addEventListener('click', runVideoGoAllAutoChain);
-
-document.getElementById('backToDashBtn')?.addEventListener('click', () => {
-    window.location.assign('dashboard.html');
-});
-
-document.getElementById('addCharRowBtn')?.addEventListener('click', () => {
-    const nextNum = labData.characters.length + 1;
-    labData.characters.push({
-        id: `char_${Date.now()}_${nextNum}`,
-        label: `Character ${nextNum}`,
-        prompt: '',
-        imageUrl: '',
-        status: 'idle',
-        errorMsg: ''
-    });
-    persistLabData();
-    renderAllSections();
-});
-
-document.getElementById('addPhotoRowBtn')?.addEventListener('click', () => {
-    const nextNum = labData.photos.length + 1;
-    labData.photos.push({
-        id: `scene_photo_${Date.now()}_${nextNum}`,
-        label: `Scene Photo ${nextNum}`,
-        refIndex: nextNum - 1,
-        prompt: '',
-        imageUrl: '',
-        status: 'idle',
-        errorMsg: ''
-    });
-    persistLabData();
-    renderAllSections();
-});
-
-document.getElementById('addSceneRowBtn')?.addEventListener('click', () => {
-    const nextNum = labData.scenes.length + 1;
-    labData.scenes.push({
-        id: `scene_step_${Date.now()}_${nextNum}`,
-        label: `Scene Step ${nextNum}`,
-        refIndex: nextNum - 1,
-        prompt: '',
-        imageUrl: '',
-        status: 'idle',
-        errorMsg: ''
-    });
-    persistLabData();
-    renderAllSections();
-});
-
-document.getElementById('closeZoomModalBtn')?.addEventListener('click', () => {
-    const modal = document.getElementById('zoomModalOverlay');
-    if (modal) modal.style.display = 'none';
-});
-
-document.getElementById('zoomModalOverlay')?.addEventListener('click', (e) => {
-    if (e.target.id === 'zoomModalOverlay') {
-        e.currentTarget.style.display = 'none';
-    }
-});
-
-renderAllSections();
