@@ -159,7 +159,7 @@ function saveGpuConnectionSettings({ endpointUrl, apiKey = '', model = '', note 
     };
 }
 
-function openGpuConnectPopup(forceOpen = false) {
+function openGpuConnectPopup(forceOpen = true) {
     if (activeGpuPopupPromise) {
         return activeGpuPopupPromise;
     }
@@ -209,10 +209,10 @@ function openGpuConnectPopup(forceOpen = false) {
                 box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
             ">
                 <div style="font-size: 17px; font-weight: 700; margin-bottom: 6px;">
-                    GPU Connect (One-Time Setup)
+                    GPU LAB Settings (One-Time Setup)
                 </div>
                 <div style="font-size: 12px; color: #94a3b8; line-height: 1.45; margin-bottom: 14px;">
-                    GPU URL એકવાર સેવ કરી લો — ફરી-ફરી નાખવાની જરૂર નહીં પડે. API Key હમણાં જરૂરી નથી (ખાલી છોડી શકો છો).
+                    यहाँ GPU URL और API Key सेव करें। API Key ज़रूरी नहीं है—न हो तो खाली छोड़ दें।
                 </div>
 
                 <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">
@@ -237,7 +237,7 @@ function openGpuConnectPopup(forceOpen = false) {
                 />
 
                 <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">
-                    API Key (Optional — ન હોય તો ખાલી રાખો)
+                    API Key (Optional — न हो तो खाली छोड़ दें)
                 </label>
                 <input
                     id="agcGpuKeyInput"
@@ -337,11 +337,11 @@ function openGpuConnectPopup(forceOpen = false) {
         const submitPopup = () => {
             const rawUrl = (urlInput.value || '').trim();
             if (!rawUrl) {
-                errBox.textContent = 'કૃપા કરીને GPU Endpoint URL નાખો.';
+                errBox.textContent = 'कृपया GPU Endpoint URL डालें।';
                 return;
             }
             if (!/^https?:\/\//i.test(rawUrl)) {
-                errBox.textContent = 'URL http:// અથવા https:// થી શરૂ થવો જોઈએ.';
+                errBox.textContent = 'URL http:// या https:// से शुरू होना चाहिए।';
                 return;
             }
 
@@ -368,6 +368,29 @@ function openGpuConnectPopup(forceOpen = false) {
     });
 
     return activeGpuPopupPromise;
+}
+
+// ऊपर "← Dashboard" के पास "GPU LAB" पर टैप करने पर पॉपअप खोलने का हुक
+function bindGpuLabHeaderTrigger() {
+    const candidates = Array.from(
+        document.querySelectorAll('button, a, span, div, h1, h2, h3, h4, label')
+    );
+
+    const gpuLabEl = candidates.find((el) => {
+        if (el.id === 'agcOneTimeGpuModal' || el.closest('#agcOneTimeGpuModal')) return false;
+        const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        return text === '⚡ GPU LAB' || text === 'GPU LAB';
+    });
+
+    if (gpuLabEl && !gpuLabEl.dataset.gpuPopupBound) {
+        gpuLabEl.dataset.gpuPopupBound = '1';
+        gpuLabEl.style.cursor = 'pointer';
+        gpuLabEl.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openGpuConnectPopup(true).catch(() => {});
+        });
+    }
 }
 
 async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefUrls = []) {
@@ -690,7 +713,7 @@ function createStudioRow(item, kind, onUpdate) {
                 await openGpuConnectPopup(false);
             } catch (popupErr) {
                 item.status = 'error';
-                item.errorMsg = popupErr?.message || 'GPU URL સેવ કરવો જરૂરી છે.';
+                item.errorMsg = popupErr?.message || 'GPU URL सेव करना ज़रूरी है।';
                 persistLabData();
                 paintOutput();
                 return;
@@ -768,6 +791,7 @@ function createStudioRow(item, kind, onUpdate) {
 function renderAllSections() {
     syncReferenceImagesToScenes();
     persistLabData();
+    bindGpuLabHeaderTrigger();
 
     const charContainer = document.getElementById('charRefRowsContainer');
     const photoContainer = document.getElementById('scenePhotoRowsContainer');
@@ -903,6 +927,7 @@ async function runVideoGoAllAutoChain() {
 
 document.addEventListener('DOMContentLoaded', () => {
     renderAllSections();
+    bindGpuLabHeaderTrigger();
 });
 
 document.getElementById('goAllCharBtn')?.addEventListener('click', runCharGoAllAutoChain);
