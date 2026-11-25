@@ -8,6 +8,9 @@ const GPU_ENDPOINT_STORAGE_KEY = 'agc_gpu_render_url';
 const GPU_API_KEY_STORAGE_KEY = 'apiKey';
 const GPU_META_STORAGE_KEY = 'agc_gpu_endpoint_meta_v1';
 
+const DEFAULT_AICREDITS_IMAGE_ENDPOINT = 'https://api.aicredits.in/v1/images/generations';
+const DEFAULT_AICREDITS_IMAGE_MODEL = 'black-forest-labs/flux-1-schnell';
+
 const retryTimers = new Map();
 let activeGpuPopupPromise = null;
 
@@ -127,9 +130,9 @@ function getSavedGpuEndpoint() {
 function getSavedGpuMeta() {
     try {
         const raw = localStorage.getItem(GPU_META_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : { model: '', note: '' };
+        return raw ? JSON.parse(raw) : { model: DEFAULT_AICREDITS_IMAGE_MODEL, note: '' };
     } catch (_) {
-        return { model: '', note: '' };
+        return { model: DEFAULT_AICREDITS_IMAGE_MODEL, note: '' };
     }
 }
 
@@ -168,16 +171,16 @@ function openGpuConnectPopup(forceOpen = true) {
         const existing = document.getElementById('agcOneTimeGpuModal');
         if (existing) existing.remove();
 
-        const currentEndpoint = getSavedGpuEndpoint();
+        const currentEndpoint = getSavedGpuEndpoint() || DEFAULT_AICREDITS_IMAGE_ENDPOINT;
         const currentKey = localStorage.getItem(GPU_API_KEY_STORAGE_KEY) || '';
         const currentMeta = getSavedGpuMeta();
 
-        if (!forceOpen && currentEndpoint) {
+        if (!forceOpen && getSavedGpuEndpoint()) {
             activeGpuPopupPromise = null;
             resolve({
-                endpointUrl: currentEndpoint,
+                endpointUrl: getSavedGpuEndpoint(),
                 apiKey: currentKey,
-                model: currentMeta.model || '',
+                model: currentMeta.model || DEFAULT_AICREDITS_IMAGE_MODEL,
                 note: currentMeta.note || ''
             });
             return;
@@ -212,17 +215,17 @@ function openGpuConnectPopup(forceOpen = true) {
                     GPU LAB Settings (One-Time Setup)
                 </div>
                 <div style="font-size: 12px; color: #94a3b8; line-height: 1.45; margin-bottom: 14px;">
-                    यहाँ GPU URL और API Key सेव करें। API Key ज़रूरी नहीं है—न हो तो खाली छोड़ दें।
+                    AiCredits Images API URL, API Key और Model ID डालकर Save & Go दबाएं।
                 </div>
 
                 <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">
-                    GPU Endpoint / Render URL *
+                    Images / Render Endpoint URL *
                 </label>
                 <input
                     id="agcGpuUrlInput"
                     type="text"
                     value="${currentEndpoint}"
-                    placeholder="https://your-gpu-endpoint/generate"
+                    placeholder="https://api.aicredits.in/v1/images/generations"
                     style="
                         width: 100%;
                         box-sizing: border-box;
@@ -237,13 +240,13 @@ function openGpuConnectPopup(forceOpen = true) {
                 />
 
                 <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">
-                    API Key (Optional — न हो तो खाली छोड़ दें)
+                    API Key (AiCredits Key)
                 </label>
                 <input
                     id="agcGpuKeyInput"
                     type="text"
                     value="${currentKey}"
-                    placeholder="Optional API Key / Token"
+                    placeholder="sk-..."
                     style="
                         width: 100%;
                         box-sizing: border-box;
@@ -258,13 +261,13 @@ function openGpuConnectPopup(forceOpen = true) {
                 />
 
                 <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">
-                    Model / Pod Note (Optional)
+                    Model ID
                 </label>
                 <input
                     id="agcGpuModelInput"
                     type="text"
-                    value="${currentMeta.model || ''}"
-                    placeholder="Optional model name or note"
+                    value="${currentMeta.model || DEFAULT_AICREDITS_IMAGE_MODEL}"
+                    placeholder="black-forest-labs/flux-1-schnell"
                     style="
                         width: 100%;
                         box-sizing: border-box;
@@ -337,7 +340,7 @@ function openGpuConnectPopup(forceOpen = true) {
         const submitPopup = () => {
             const rawUrl = (urlInput.value || '').trim();
             if (!rawUrl) {
-                errBox.textContent = 'कृपया GPU Endpoint URL डालें।';
+                errBox.textContent = 'कृपया Endpoint URL डालें।';
                 return;
             }
             if (!/^https?:\/\//i.test(rawUrl)) {
@@ -348,7 +351,7 @@ function openGpuConnectPopup(forceOpen = true) {
             const saved = saveGpuConnectionSettings({
                 endpointUrl: rawUrl,
                 apiKey: keyInput.value || '',
-                model: modelInput.value || '',
+                model: (modelInput.value || '').trim() || DEFAULT_AICREDITS_IMAGE_MODEL,
                 note: currentMeta.note || ''
             });
 
@@ -370,7 +373,6 @@ function openGpuConnectPopup(forceOpen = true) {
     return activeGpuPopupPromise;
 }
 
-// ऊपर "← Dashboard" के पास "GPU LAB" पर टैप करने पर पॉपअप खोलने का हुक
 function bindGpuLabHeaderTrigger() {
     const candidates = Array.from(
         document.querySelectorAll('button, a, span, div, h1, h2, h3, h4, label')
@@ -401,7 +403,7 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
     }
 
     if (!endpoint) {
-        throw new Error('GPU render endpoint set नहीं है।');
+        throw new Error('Endpoint URL set नहीं है।');
     }
 
     const apiKey = (localStorage.getItem(GPU_API_KEY_STORAGE_KEY) || '').trim();
@@ -411,24 +413,40 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
         headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
+    const isImagesEndpoint = /\/images\/generations/i.test(endpoint);
+    const bodyPayload = isImagesEndpoint
+        ? {
+              model: meta.model || DEFAULT_AICREDITS_IMAGE_MODEL,
+              prompt: promptText,
+              n: 1,
+              size: '1024x1024'
+          }
+        : {
+              kind,
+              prompt: promptText,
+              model: meta.model || undefined,
+              referenceImage: refImageUrl || null,
+              referenceImages: Array.isArray(allRefUrls) ? allRefUrls : (refImageUrl ? [refImageUrl] : [])
+          };
+
     const res = await fetch(endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-            kind,
-            prompt: promptText,
-            model: meta.model || undefined,
-            referenceImage: refImageUrl || null,
-            referenceImages: Array.isArray(allRefUrls) ? allRefUrls : (refImageUrl ? [refImageUrl] : [])
-        })
+        body: JSON.stringify(bodyPayload)
     });
 
+    const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
-        throw new Error(`GPU error (${res.status})`);
+        const apiErrMsg = data?.error?.message || data?.message || '';
+        throw new Error(apiErrMsg ? `GPU error (${res.status}): ${apiErrMsg}` : `GPU error (${res.status})`);
     }
 
-    const data = await res.json();
+    const firstItem = Array.isArray(data.data) ? data.data[0] : null;
+    const b64Img = firstItem?.b64_json || data.b64_json || '';
     const outUrl =
+        firstItem?.url ||
+        (b64Img ? `data:image/png;base64,${b64Img}` : '') ||
         data.imageUrl ||
         data.videoUrl ||
         data.content_url ||
@@ -438,7 +456,7 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
         '';
 
     if (!outUrl) {
-        throw new Error('Render output URL प्राप्त नहीं हुआ।');
+        throw new Error('Image/Render URL प्राप्त नहीं हुआ।');
     }
     return outUrl;
 }
@@ -472,7 +490,6 @@ function syncReferenceImagesToScenes() {
         return charRefs[fallbackIdx % charRefs.length] || '';
     };
 
-    // 1 -> 2: Character Reference Photos -> Scene Photo Studio
     labData.photos.forEach((ph, idx) => {
         ph.allRefUrls = charRefs;
         if (ph.manualRefUrl) {
@@ -484,7 +501,6 @@ function syncReferenceImagesToScenes() {
         }
     });
 
-    // 2 -> 3: Scene Photos -> Scene Video Studio
     labData.scenes.forEach((sc, idx) => {
         const sceneNumMatch = (sc.label || '').match(/सीन\s*(\d+)|scene\s*(\d+)/i);
         const parsedSceneNum = sceneNumMatch ? parseInt(sceneNumMatch[1] || sceneNumMatch[2], 10) : NaN;
@@ -637,12 +653,12 @@ function createStudioRow(item, kind, onUpdate) {
         if (item.status === 'loading') {
             const p = document.createElement('div');
             p.className = 'output-placeholder';
-            p.textContent = 'GPU रेंडरिंग चल रही है...';
+            p.textContent = 'रेंडरिंग चल रही है...';
             frame.appendChild(p);
         } else if (item.status === 'error') {
             const errEl = document.createElement('div');
             errEl.className = 'output-error';
-            errEl.textContent = item.errorMsg || 'GPU एरर आया।';
+            errEl.textContent = item.errorMsg || 'एरर आया।';
             frame.appendChild(errEl);
         } else if (item.imageUrl) {
             if (isVideoMediaUrl(item.imageUrl)) {
@@ -713,7 +729,7 @@ function createStudioRow(item, kind, onUpdate) {
                 await openGpuConnectPopup(false);
             } catch (popupErr) {
                 item.status = 'error';
-                item.errorMsg = popupErr?.message || 'GPU URL सेव करना ज़रूरी है।';
+                item.errorMsg = popupErr?.message || 'Endpoint URL सेव करना ज़रूरी है।';
                 persistLabData();
                 paintOutput();
                 return;
@@ -744,7 +760,7 @@ function createStudioRow(item, kind, onUpdate) {
             onUpdate();
         } catch (err) {
             item.status = 'error';
-            item.errorMsg = err?.message || 'GPU रेंडर फेल हुआ।';
+            item.errorMsg = err?.message || 'रेंडर फेल हुआ।';
             persistLabData();
             paintOutput();
             scheduleAutoRetry();
