@@ -14,6 +14,12 @@ const DEFAULT_AICREDITS_IMAGE_MODEL = 'black-forest-labs/flux-1-schnell';
 const retryTimers = new Map();
 let activeGpuPopupPromise = null;
 
+function sanitizeEndpointUrl(rawVal = '') {
+    const trimmed = (rawVal || '').trim();
+    const match = trimmed.match(/https?:\/\/[^\s"'\\\]\)]+/i);
+    return (match ? match[0] : trimmed).replace(/\/+$/, '');
+}
+
 function getActiveOrLatestSessionId() {
     try {
         const explicitId = localStorage.getItem(ACTIVE_SESSION_KEY);
@@ -71,13 +77,30 @@ if (!Array.isArray(labData.photos)) labData.photos = [];
 if (!Array.isArray(labData.scenes)) labData.scenes = [];
 
 function persistLabData() {
-    const map = loadLabStateMap();
-    map[sessionId] = {
-        sessionId,
-        updatedAt: Date.now(),
-        data: labData
-    };
-    localStorage.setItem(LAB1_STATE_KEY, JSON.stringify(map));
+    try {
+        const map = loadLabStateMap();
+        map[sessionId] = {
+            sessionId,
+            updatedAt: Date.now(),
+            data: labData
+        };
+        localStorage.setItem(LAB1_STATE_KEY, JSON.stringify(map));
+    } catch (_) {
+        try {
+            const lightweightData = {
+                characters: labData.characters.map(({ imageUrl, ...rest }) => rest),
+                photos: labData.photos.map(({ imageUrl, ...rest }) => rest),
+                scenes: labData.scenes.map(({ imageUrl, ...rest }) => rest)
+            };
+            const map = loadLabStateMap();
+            map[sessionId] = {
+                sessionId,
+                updatedAt: Date.now(),
+                data: lightweightData
+            };
+            localStorage.setItem(LAB1_STATE_KEY, JSON.stringify(map));
+        } catch (_) {}
+    }
 }
 
 function clearRetryTimer(rowId) {
@@ -87,31 +110,126 @@ function clearRetryTimer(rowId) {
     }
 }
 
-function openZoomModal(imgSrc) {
-    const modal = document.getElementById('zoomModalOverlay');
-    const modalImg = document.getElementById('zoomModalImage');
-    if (!modal || !modalImg || !imgSrc) return;
+// =========================================================
+// PRESS & HOLD ZOOM POPUP (SHOW WHILE HELD, CLOSE ON RELEASE)
+// =========================================================
+
+function ensureHoldZoomPopup() {
+    let modal = document.getElementById('zoomModalOverlay');
+    let modalImg = document.getElementById('zoomModalImage');
+    let modalTitle = document.getElementById('zoomModalTitle');
+
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'zoomModalOverlay';
+        modal.style.cssText = `
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.92);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100000;
+            padding: 16px;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        `;
+
+        modalTitle = document.createElement('div');
+        modalTitle.id = 'zoomModalTitle';
+        modalTitle.style.cssText = `
+            font-size: 14px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 10px;
+            text-align: center;
+        `;
+
+        modalImg = document.createElement('img');
+        modalImg.id = 'zoomModalImage';
+        modalImg.alt = 'Hold Zoom Preview';
+        modalImg.style.cssText = `
+            max-width: 96vw;
+            max-height: 82vh;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            pointer-events: none;
+        `;
+
+        modal.appendChild(modalTitle);
+        modal.appendChild(modalImg);
+        document.body.appendChild(modal);
+    }
+
+    return { modal, modalImg, modalTitle };
+}
+
+function openZoomModal(imgSrc, labelText = 'Reference Photo') {
+    if (!imgSrc) return;
+    const { modal, modalImg, modalTitle } = ensureHoldZoomPopup();
+    if (!modal || !modalImg) return;
+    if (modalTitle) {
+        modalTitle.textContent = labelText || 'Reference Photo';
+    }
     modalImg.src = imgSrc;
     modal.style.display = 'flex';
 }
 
-function attachPressAndHoldZoom(imgEl, getSrcFn) {
-    let holdTimer = null;
+function hideHoldZoomPopup() {
+    const modal = document.getElementById('zoomModalOverlay');
+    const modalImg = document.getElementById('zoomModalImage');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    if (modalImg) {
+        modalImg.src = '';
+    }
+}
 
-    const startHold = () => {
-        clearTimeout(holdTimer);
-        holdTimer = setTimeout(() => {
-            const src = getSrcFn();
-            if (src) openZoomModal(src);
-        }, 450);
+window.addEventListener('pointerup', hideHoldZoomPopup);
+window.addEventListener('pointercancel', hideHoldZoomPopup);
+window.addEventListener('touchend', hideHoldZoomPopup);
+window.addEventListener('touchcancel', hideHoldZoomPopup);
+window.addEventListener('mouseup', hideHoldZoomPopup);
+window.addEventListener('blur', hideHoldZoomPopup);
+
+function attachPressAndHoldZoom(imgEl, getSrcFn, getLabelFn = null) {
+    if (!imgEl) return;
+
+    imgEl.style.cursor = 'pointer';
+    imgEl.style.userSelect = 'none';
+    imgEl.style.webkitUserSelect = 'none';
+    imgEl.style.webkitTouchCallout = 'none';
+
+    const startZoom = (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        const src = typeof getSrcFn === 'function' ? getSrcFn() : '';
+        if (!src) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const label = typeof getLabelFn === 'function' ? getLabelFn() : 'Reference Photo';
+        openZoomModal(src, label);
     };
 
-    const cancelHold = () => clearTimeout(holdTimer);
+    const endZoom = () => {
+        hideHoldZoomPopup();
+    };
 
-    imgEl.addEventListener('pointerdown', startHold);
-    imgEl.addEventListener('pointerup', cancelHold);
-    imgEl.addEventListener('pointerleave', cancelHold);
-    imgEl.addEventListener('pointercancel', cancelHold);
+    imgEl.addEventListener('pointerdown', startZoom);
+    imgEl.addEventListener('pointerup', endZoom);
+    imgEl.addEventListener('pointercancel', endZoom);
+    imgEl.addEventListener('pointerleave', endZoom);
     imgEl.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
@@ -120,11 +238,12 @@ function attachPressAndHoldZoom(imgEl, getSrcFn) {
 // =========================================================
 
 function getSavedGpuEndpoint() {
-    return (
+    const raw = (
         localStorage.getItem(GPU_ENDPOINT_STORAGE_KEY) ||
         localStorage.getItem('baseUrl') ||
         ''
     ).trim();
+    return sanitizeEndpointUrl(raw);
 }
 
 function getSavedGpuMeta() {
@@ -137,7 +256,7 @@ function getSavedGpuMeta() {
 }
 
 function saveGpuConnectionSettings({ endpointUrl, apiKey = '', model = '', note = '' }) {
-    const cleanUrl = (endpointUrl || '').trim();
+    const cleanUrl = sanitizeEndpointUrl(endpointUrl);
     const cleanKey = (apiKey || '').trim();
     const cleanModel = (model || '').trim();
     const cleanNote = (note || '').trim();
@@ -338,7 +457,7 @@ function openGpuConnectPopup(forceOpen = true) {
         });
 
         const submitPopup = () => {
-            const rawUrl = (urlInput.value || '').trim();
+            const rawUrl = sanitizeEndpointUrl(urlInput.value || '');
             if (!rawUrl) {
                 errBox.textContent = 'कृपया Endpoint URL डालें।';
                 return;
@@ -402,6 +521,7 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
         endpoint = cfg.endpointUrl;
     }
 
+    endpoint = sanitizeEndpointUrl(endpoint);
     if (!endpoint) {
         throw new Error('Endpoint URL set नहीं है।');
     }
@@ -587,7 +707,7 @@ function createStudioRow(item, kind, onUpdate) {
         if (item.activeRefUrl) {
             thumb.src = item.activeRefUrl;
             thumb.style.display = 'inline-block';
-            thumb.addEventListener('click', () => openZoomModal(item.activeRefUrl));
+            attachPressAndHoldZoom(thumb, () => item.activeRefUrl, () => `${item.label || 'Scene'} - Ref Photo`);
         }
 
         const picker = document.createElement('select');
@@ -675,8 +795,9 @@ function createStudioRow(item, kind, onUpdate) {
                 const img = document.createElement('img');
                 img.className = 'output-image';
                 img.src = item.imageUrl;
-                img.alt = item.label;
-                attachPressAndHoldZoom(img, () => item.imageUrl);
+                img.alt = item.label || 'Reference Photo';
+                img.style.cssText = 'display:block;width:100%;max-height:260px;object-fit:contain;border-radius:8px;';
+                attachPressAndHoldZoom(img, () => item.imageUrl, () => item.label || 'Reference Photo');
                 frame.appendChild(img);
             }
         } else {
@@ -757,6 +878,7 @@ function createStudioRow(item, kind, onUpdate) {
             item.status = 'done';
             item.errorMsg = '';
             persistLabData();
+            paintOutput();
             onUpdate();
         } catch (err) {
             item.status = 'error';
@@ -854,6 +976,73 @@ function renderAllSections() {
             });
         }
     }
+}
+
+// =========================================================
+// JSON EXPORT / IMPORT HELPERS
+// =========================================================
+
+function exportLabDataToJsonFile() {
+    try {
+        const snapshot = {
+            app: 'AGC_GPU_LAB1',
+            sessionId,
+            exportedAt: new Date().toISOString(),
+            data: labData
+        };
+        const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lab1-project-${sessionId}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (err) {
+        console.error('JSON export error:', err);
+    }
+}
+
+function applyImportedJsonData(parsedJson) {
+    const incomingData = parsedJson?.data && typeof parsedJson.data === 'object'
+        ? parsedJson.data
+        : parsedJson;
+
+    if (!incomingData || typeof incomingData !== 'object') {
+        throw new Error('Invalid JSON format');
+    }
+
+    labData = {
+        characters: Array.isArray(incomingData.characters) ? incomingData.characters : [],
+        photos: Array.isArray(incomingData.photos) ? incomingData.photos : [],
+        scenes: Array.isArray(incomingData.scenes) ? incomingData.scenes : []
+    };
+
+    syncReferenceImagesToScenes();
+    persistLabData();
+    renderAllSections();
+}
+
+function triggerImportLabJsonFile() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const parsed = JSON.parse(String(reader.result || '{}'));
+                applyImportedJsonData(parsed);
+            } catch (err) {
+                alert('JSON फ़ाइल पढ़ने में दिक्कत आई: ' + (err?.message || err));
+            }
+        };
+        reader.readAsText(file);
+    });
+    input.click();
 }
 
 async function waitForSectionCompletion(itemsList, timeoutMs = 180000) {
