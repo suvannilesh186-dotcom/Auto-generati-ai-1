@@ -11,6 +11,7 @@ let loaderInterval = null;
 let currentProcessPhase = 'idle';
 let activeSessionId = 'session_' + Date.now();
 let currentSessionMessages = [];
+let latestStoryText = '';
 let latestSplitScenesText = '';
 let latestCharRefPromptsText = '';
 let latestScenePhotoPromptsText = '';
@@ -28,6 +29,51 @@ const loaderMessages = [
     "Analyzing...",
     "Almost ready..."
 ];
+
+// ==========================================
+// 🧠 Hidden Master Visual & Prompt Rules (Gemini-Style Pipeline)
+// ==========================================
+const GEMINI_STYLE_MASTER_RULES = `
+You are an expert AI Film Director & Visual Prompt Architect.
+Always follow these internal rules when generating prompts (never echo these rules in user chat):
+
+1. STORY STYLE LOCK (3D CARTOON vs NATURAL HUMAN):
+   - Analyze the story first and lock ONE consistent visual style across all prompts.
+   - If the story is a cartoon, fantasy, kids, mythological, or stylized animation story: use a cohesive 3D Pixar-inspired animated film style (clean stylized 3D modeling, expressive eyes/faces, studio/cinematic lighting).
+   - If the story is a realistic, emotional, dramatic, or real-life human story: use a natural cinematic live-action human style (realistic human skin texture, real fabric folds, natural lighting, true-to-life proportions) — unless a 3D turnaround sheet is specifically requested for character reference.
+   - Never mix random art styles inside the same story.
+
+2. CHARACTER TURNAROUND REFERENCE SHEETS:
+   - Include ONLY valid characters present in the story/script (never write "None" or "N/A").
+   - Lock each character's exact identity once: age, facial structure, hair style & color, skin tone, and exact outfit/colors.
+   - Describe each character sheet cleanly with full-body front, side, and back views plus clear facial expression close-ups (happy, sad, angry, surprised) on a clean neutral studio background.
+   - Never write vague contradictions like "face not visible" unless a mask/helmet is part of the story.
+
+3. SCENE PHOTO PROMPTS:
+   - Repeat each character's exact locked appearance (hair, face, outfit) in every scene so characters never randomly morph into strangers.
+   - Specify clear camera framing (wide shot / medium shot / close-up), environment, lighting, and natural body/hand posture.
+
+4. 10-SECOND VIDEO MOTION PROMPTS:
+   - Treat each 10-second clip as starting directly from its matching Scene Photo.
+   - Describe natural, believable 10-second motion: subtle expression shift, breathing/head turn, natural hand movement, and smooth slow camera motion (pan, tilt, or gentle push-in).
+   - Keep background, clothing, and held objects consistent.
+   - Strict anti-artifact rule: single coherent face per character, anatomically accurate hands and fingers, no extra arms or limbs, no sudden face/outfit swaps, no text or watermarks.
+`.trim();
+
+function isPromptRequestText(text) {
+    const t = (text || '').trim().toLowerCase();
+    if (!t) return false;
+    return (
+        t.includes('प्रॉम्प्ट') ||
+        t.includes('prompt') ||
+        t.includes('रेफरेंस') ||
+        t.includes('reference') ||
+        t.includes('सीन फोटो') ||
+        t.includes('scene photo') ||
+        t.includes('वीडियो प्रॉम्प्ट') ||
+        t.includes('video prompt')
+    );
+}
 
 // ==========================================
 // 💾 48h Full Chat Saver & Sidebar List
@@ -158,7 +204,7 @@ function saveFullChatTurn(sender, text, phaseTag = '') {
             sessionId: activeSessionId,
             updatedAt: nowTs,
             time: sessionRecord.timeLabel,
-            script: latestSplitScenesText || text,
+            script: latestSplitScenesText || latestStoryText || text,
             fullChat: transcript,
             messages: currentSessionMessages
         }));
@@ -219,55 +265,59 @@ function ensureCharacterRefMasterSettingToggle() {
 // 📝 Prompt Builders (Character Ref -> Scene Photo -> Scene Video)
 // ==========================================
 function buildCharacterReferencePrompt(sceneSplitText) {
+    const sourceContext = (sceneSplitText || latestSplitScenesText || latestStoryText || '').trim();
     return `[AUTO_CHARACTER_REF_PROMPT]
-Write ONLY valid characters present in the script below. Do NOT write "None" or "N/A".
-For each valid character (and any key magical gadget/object if needed), write in this EXACT format:
+Write ONLY valid characters present in the story/script below. Do NOT write "None" or "N/A".
+Lock the story's visual style (3D cartoon or natural human) and describe full-body front, side, and back views plus facial expression close-ups (happy, sad, angry, surprised) on a clean neutral studio background.
+For each valid character, write in this EXACT format:
 
 स्टेप 1: [Character Name]
-Prompt: [Detailed 100% English character sheet prompt with face, outfit, lighting, clean neutral light grey background, 8k]
+Prompt: [Detailed 100% English character turnaround sheet prompt with full-body front/side/back views, facial expressions happy/sad/angry/surprised, exact face, hair, and outfit on a clean neutral studio background]
 
 स्टेप 2: [Next Character Name]
-Prompt: [Detailed 100% English character sheet prompt]
+Prompt: [Detailed 100% English character turnaround sheet prompt]
 
-Scene-by-Scene Script:
-${sceneSplitText}`;
+Story / Script:
+${sourceContext}`;
 }
 
 function buildScenePhotoPrompts(sceneSplitText, charRefPromptsText) {
+    const sourceContext = (sceneSplitText || latestSplitScenesText || latestStoryText || '').trim();
     return `[AUTO_SCENE_PHOTO_PROMPTS]
-Using the script and character prompts below, generate one still image prompt per scene in this EXACT format:
+Using the story/script and character prompts below, generate one still image prompt per scene in this EXACT format:
 
 फोटो 1 (सीन 1 - [Short Hindi Title])
-Prompt: [Detailed 100% English image generation prompt keeping the exact same character appearance, outfit, scene setting, lighting, 8k]
+Prompt: [Detailed 100% English image generation prompt keeping the exact same character appearance, outfit, pose, camera angle, environment, and lighting]
 
 फोटो 2 (सीन 2 - [Short Hindi Title])
 Prompt: [Detailed 100% English image generation prompt]
 
-Scene-by-Scene Script:
-${sceneSplitText}
+Story / Script:
+${sourceContext}
 
 Character Prompts:
-${charRefPromptsText}`;
+${charRefPromptsText || ''}`;
 }
 
 function buildDynamicSceneVideoPrompts(sceneSplitText, charRefPromptsText, scenePhotoPromptsText) {
+    const sourceContext = (sceneSplitText || latestSplitScenesText || latestStoryText || '').trim();
     return `[AUTO_SCENE_VIDEO_PROMPTS]
-Using the script, character prompts, and scene photo prompts below, generate one Image-to-Video prompt per scene in this EXACT format:
+Using the story/script, character prompts, and scene photo prompts below, generate one 10-second Image-to-Video prompt per scene continuing smoothly from that scene's photo with zero double faces, zero extra hands/fingers, and consistent outfit/background in this EXACT format:
 
 सीन 1 वीडियो प्रॉम्प्ट
-Prompt: [Detailed 100% English video animation prompt describing camera movement, character action, expression, smooth animation, consistent character design]
+Prompt: [Detailed 100% English 10-second video motion prompt describing smooth camera movement, natural character action and expression, consistent character design, no double faces or extra limbs]
 
 सीन 2 वीडियो प्रॉम्प्ट
-Prompt: [Detailed 100% English video animation prompt]
+Prompt: [Detailed 100% English 10-second video motion prompt]
 
-Scene-by-Scene Script:
-${sceneSplitText}
+Story / Script:
+${sourceContext}
 
 Character Prompts:
-${charRefPromptsText}
+${charRefPromptsText || ''}
 
 Scene Photo Prompts:
-${scenePhotoPromptsText}`;
+${scenePhotoPromptsText || ''}`;
 }
 
 // ==========================================
@@ -735,17 +785,34 @@ const chatMessages = document.getElementById('chatMessages');
 const chatInput = document.getElementById('chatInput');
 const sendChatBtn = document.getElementById('sendChatBtn');
 
-async function executePromptTurn(overrideText = '', forcedPhase = null) {
+async function executePromptTurn(overrideText = '', forcedPhase = null, displayOverride = null) {
     if (!chatInput || !sendChatBtn || !chatMessages) return;
 
-    const text = (overrideText || chatInput.value).trim();
-    if (!text) return;
+    const rawInput = (overrideText || chatInput.value).trim();
+    if (!rawInput) return;
 
-    const phaseWhenSent = forcedPhase || (currentProcessPhase === 'idle' ? 'story_generation' : currentProcessPhase);
+    const isAutoInternalTrigger = Boolean(overrideText);
+    const userRequestedPrompts = !isAutoInternalTrigger && isPromptRequestText(rawInput);
+
+    let phaseWhenSent = forcedPhase || (currentProcessPhase === 'idle' ? 'story_generation' : currentProcessPhase);
+    if (userRequestedPrompts) {
+        phaseWhenSent = 'character_ref_prompt';
+    }
     currentProcessPhase = phaseWhenSent;
 
-    appendMessage(text, 'user', true, phaseWhenSent, true);
-    if (!overrideText) chatInput.value = '';
+    // चैट में सिर्फ़ साफ़ टेक्स्ट दिखना चाहिए—लंबा सिस्टम/ऑटो-प्रॉम्प्ट नहीं
+    const visibleChatText = displayOverride || (isAutoInternalTrigger ? '' : rawInput);
+    if (visibleChatText) {
+        appendMessage(visibleChatText, 'user', true, phaseWhenSent, true);
+    }
+    if (!isAutoInternalTrigger) chatInput.value = '';
+
+    // API को भेजने वाला असली कंटेंट तैयार करें
+    let apiUserContent = rawInput;
+    if (userRequestedPrompts) {
+        const storyCtx = (latestSplitScenesText || latestStoryText || '').trim();
+        apiUserContent = `${buildCharacterReferencePrompt(storyCtx)}\n\nUser Message: ${rawInput}`;
+    }
 
     let apiKey = localStorage.getItem('apiKey');
     let baseUrl = localStorage.getItem('baseUrl');
@@ -799,8 +866,8 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
         phaseWhenSent === 'scene_video_prompts';
 
     const systemInstruction = isPromptPhase
-        ? "You are AGC.AI Core. Follow the exact format requested and write EVERY prompt strictly in clean, detailed ENGLISH without 'None' or 'N/A'."
-        : "You are AGC.AI Core, an expert YouTube scriptwriter. Write complete, detailed, and engaging scripts with character dialogues in HINDI.";
+        ? `You are AGC.AI Core. ${GEMINI_STYLE_MASTER_RULES}\nWrite EVERY prompt strictly in clean, detailed ENGLISH without "None" or "N/A".`
+        : `You are AGC.AI Core, an expert YouTube scriptwriter. ${GEMINI_STYLE_MASTER_RULES}\nWrite complete, detailed, and engaging scripts with character dialogues in HINDI.`;
 
     const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
     let finalResponse = null;
@@ -823,7 +890,7 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
                         model: model,
                         messages: [
                             { role: "system", content: systemInstruction },
-                            { role: "user", content: text }
+                            { role: "user", content: apiUserContent }
                         ],
                         temperature: 0.7,
                         max_tokens: 3000
@@ -856,6 +923,10 @@ async function executePromptTurn(overrideText = '', forcedPhase = null) {
     if (loadingMsg.parentNode) loadingMsg.parentNode.removeChild(loadingMsg);
 
     if (finalResponse) {
+        if (phaseWhenSent === 'story_generation') {
+            latestStoryText = finalResponse;
+        }
+
         const isPromptOutput =
             phaseWhenSent === 'character_ref_prompt' ||
             phaseWhenSent === 'scene_photo_prompts' ||
@@ -908,9 +979,12 @@ ${finalResponse}
             latestCharRefPromptsText = finalResponse;
             syncCharactersToLab1(latestCharRefPromptsText, activeSessionId);
 
-            if (isCharRefToggleON) {
+            if (isCharRefToggleON || userRequestedPrompts) {
                 setTimeout(() => {
-                    executePromptTurn(buildScenePhotoPrompts(latestSplitScenesText, latestCharRefPromptsText), 'scene_photo_prompts');
+                    executePromptTurn(
+                        buildScenePhotoPrompts(latestSplitScenesText || latestStoryText, latestCharRefPromptsText),
+                        'scene_photo_prompts'
+                    );
                 }, 1500);
             } else {
                 currentProcessPhase = 'idle';
@@ -919,10 +993,14 @@ ${finalResponse}
             latestScenePhotoPromptsText = finalResponse;
             syncScenePhotosToLab1(latestScenePhotoPromptsText, activeSessionId);
 
-            if (isCharRefToggleON) {
+            if (isCharRefToggleON || userRequestedPrompts) {
                 setTimeout(() => {
                     executePromptTurn(
-                        buildDynamicSceneVideoPrompts(latestSplitScenesText, latestCharRefPromptsText, latestScenePhotoPromptsText),
+                        buildDynamicSceneVideoPrompts(
+                            latestSplitScenesText || latestStoryText,
+                            latestCharRefPromptsText,
+                            latestScenePhotoPromptsText
+                        ),
                         'scene_video_prompts'
                     );
                 }, 1500);
@@ -979,6 +1057,7 @@ window.addEventListener('message', (event) => {
         activeSessionId = 'session_' + Date.now();
         localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
         currentSessionMessages = [];
+        latestStoryText = '';
         latestSplitScenesText = '';
         latestCharRefPromptsText = '';
         latestScenePhotoPromptsText = '';
