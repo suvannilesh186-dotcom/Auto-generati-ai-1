@@ -334,7 +334,7 @@ function openGpuConnectPopup(forceOpen = true) {
                     GPU LAB Settings (One-Time Setup)
                 </div>
                 <div style="font-size: 12px; color: #94a3b8; line-height: 1.45; margin-bottom: 14px;">
-                    AiCredits Images API URL, API Key और Model ID डालकर Save & Go दबाएं।
+                    AiCredits Images API URL, API Key aur Model ID daal kar Save & Go dabayein.
                 </div>
 
                 <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">
@@ -459,11 +459,11 @@ function openGpuConnectPopup(forceOpen = true) {
         const submitPopup = () => {
             const rawUrl = sanitizeEndpointUrl(urlInput.value || '');
             if (!rawUrl) {
-                errBox.textContent = 'कृपया Endpoint URL डालें।';
+                errBox.textContent = 'Kripya Endpoint URL daalein.';
                 return;
             }
             if (!/^https?:\/\//i.test(rawUrl)) {
-                errBox.textContent = 'URL http:// या https:// से शुरू होना चाहिए।';
+                errBox.textContent = 'URL http:// ya https:// se shuru hona chahiye.';
                 return;
             }
 
@@ -514,41 +514,41 @@ function bindGpuLabHeaderTrigger() {
     }
 }
 
-async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefUrls = []) {
-    let endpoint = getSavedGpuEndpoint();
-    if (!endpoint) {
-        const cfg = await openGpuConnectPopup(false);
-        endpoint = cfg.endpointUrl;
+function resolveRenderSize(promptText = '', kind = '') {
+    if (kind === 'character_reference') {
+        return '1344x768';
     }
 
-    endpoint = sanitizeEndpointUrl(endpoint);
-    if (!endpoint) {
-        throw new Error('Endpoint URL set नहीं है।');
+    const p = (promptText || '').toLowerCase();
+    const isYouTubeShorts =
+        /\b9\s*:\s*16\b/.test(p) ||
+        /\byoutube\s*shorts?\b/.test(p) ||
+        /\bshorts?\s*mode\b/.test(p) ||
+        /यूट्यूब\s*शॉर्ट्स/.test(promptText || '');
+
+    if (isYouTubeShorts) {
+        return '768x1344';
     }
 
-    const apiKey = (localStorage.getItem(GPU_API_KEY_STORAGE_KEY) || '').trim();
-    const meta = getSavedGpuMeta();
-    const headers = { 'Content-Type': 'application/json' };
-    if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
+    return '1344x768';
+}
+
+function formatPromptForRender(promptText, kind) {
+    const clean = (promptText || '').trim();
+    const qualityBoost = 'high detail, sharp focus, clean lighting, crisp edges, natural proportions, no blur, no distortion, no watermark';
+
+    if (kind === 'character_reference') {
+        return `${clean} Clean wide horizontal 16:9 character turnaround sheet on a solid light grey studio background, top row showing separated full-body poses (Front, Side Profile, Back, Three-Quarter) spaced apart with no overlapping heads or stacked faces, bottom row showing separate expression faces (Happy, Sad, Angry, Surprised), ${qualityBoost}.`;
     }
 
-    const isImagesEndpoint = /\/images\/generations/i.test(endpoint);
-    const bodyPayload = isImagesEndpoint
-        ? {
-              model: meta.model || DEFAULT_AICREDITS_IMAGE_MODEL,
-              prompt: promptText,
-              n: 1,
-              size: '1024x1024'
-          }
-        : {
-              kind,
-              prompt: promptText,
-              model: meta.model || undefined,
-              referenceImage: refImageUrl || null,
-              referenceImages: Array.isArray(allRefUrls) ? allRefUrls : (refImageUrl ? [refImageUrl] : [])
-          };
+    if (kind === 'scene_photo') {
+        return `${clean} Widescreen 16:9 YouTube scene frame, ${qualityBoost}.`;
+    }
 
+    return `${clean} ${qualityBoost}.`;
+}
+
+async function requestSingleGpuRender(endpoint, headers, bodyPayload) {
     const res = await fetch(endpoint, {
         method: 'POST',
         headers,
@@ -576,9 +576,67 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
         '';
 
     if (!outUrl) {
-        throw new Error('Image/Render URL प्राप्त नहीं हुआ।');
+        throw new Error('Image/Render URL prapt nahi hua.');
     }
     return outUrl;
+}
+
+async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefUrls = []) {
+    let endpoint = getSavedGpuEndpoint();
+    if (!endpoint) {
+        const cfg = await openGpuConnectPopup(false);
+        endpoint = cfg.endpointUrl;
+    }
+
+    endpoint = sanitizeEndpointUrl(endpoint);
+    if (!endpoint) {
+        throw new Error('Endpoint URL set nahi hai.');
+    }
+
+    const apiKey = (localStorage.getItem(GPU_API_KEY_STORAGE_KEY) || '').trim();
+    const meta = getSavedGpuMeta();
+    const headers = { 'Content-Type': 'application/json' };
+    if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    const finalPrompt = formatPromptForRender(promptText, kind);
+    const primarySize = resolveRenderSize(promptText, kind);
+    const primaryModel = meta.model || DEFAULT_AICREDITS_IMAGE_MODEL;
+    const isImagesEndpoint = /\/images\/generations/i.test(endpoint);
+
+    const attempts = [
+        { model: primaryModel, size: primarySize },
+        { model: primaryModel, size: '1024x1024' },
+        { model: DEFAULT_AICREDITS_IMAGE_MODEL, size: '1024x1024' }
+    ];
+
+    let lastErr = null;
+    for (const attempt of attempts) {
+        const bodyPayload = isImagesEndpoint
+            ? {
+                  model: attempt.model,
+                  prompt: finalPrompt,
+                  n: 1,
+                  size: attempt.size
+              }
+            : {
+                  kind,
+                  prompt: finalPrompt,
+                  size: attempt.size,
+                  model: attempt.model,
+                  referenceImage: refImageUrl || null,
+                  referenceImages: Array.isArray(allRefUrls) ? allRefUrls : (refImageUrl ? [refImageUrl] : [])
+              };
+
+        try {
+            return await requestSingleGpuRender(endpoint, headers, bodyPayload);
+        } catch (err) {
+            lastErr = err;
+        }
+    }
+
+    throw lastErr || new Error('Render fail hua.');
 }
 
 function isVideoMediaUrl(url = '') {
@@ -666,9 +724,9 @@ function createStudioRow(item, kind, onUpdate) {
     const textarea = document.createElement('textarea');
     textarea.className = 'studio-textarea';
     textarea.placeholder =
-        kind === 'char' ? 'Character Reference Prompt यहाँ ऑटो पेस्ट होगा...' :
-        kind === 'photo' ? 'Scene Photo Prompt यहाँ ऑटो पेस्ट होगा...' :
-        'Scene Video Prompt यहाँ ऑटो पेस्ट होगा...';
+        kind === 'char' ? 'Character Reference Prompt yahan auto paste hoga...' :
+        kind === 'photo' ? 'Scene Photo Prompt yahan auto paste hoga...' :
+        'Scene Video Prompt yahan auto paste hoga...';
     textarea.value = item.prompt || '';
 
     textarea.addEventListener('input', () => {
@@ -773,12 +831,12 @@ function createStudioRow(item, kind, onUpdate) {
         if (item.status === 'loading') {
             const p = document.createElement('div');
             p.className = 'output-placeholder';
-            p.textContent = 'रेंडरिंग चल रही है...';
+            p.textContent = 'Rendering chal rahi hai...';
             frame.appendChild(p);
         } else if (item.status === 'error') {
             const errEl = document.createElement('div');
             errEl.className = 'output-error';
-            errEl.textContent = item.errorMsg || 'एरर आया।';
+            errEl.textContent = item.errorMsg || 'Error aaya.';
             frame.appendChild(errEl);
         } else if (item.imageUrl) {
             if (isVideoMediaUrl(item.imageUrl)) {
@@ -804,9 +862,9 @@ function createStudioRow(item, kind, onUpdate) {
             const p = document.createElement('div');
             p.className = 'output-placeholder';
             p.textContent =
-                kind === 'char' ? 'GO दबाएं — रेफरेंस फोटो यहाँ आएगा।' :
-                kind === 'photo' ? 'रेफरेंस फोटो व सीन प्रॉम्प्ट तैयार — GO दबाएं।' :
-                'सीन फोटो व वीडियो प्रॉम्प्ट तैयार — GO दबाएं।';
+                kind === 'char' ? 'GO dabayein — reference photo yahan aayega.' :
+                kind === 'photo' ? 'Reference photo aur scene prompt taiyar — GO dabayein.' :
+                'Scene photo aur video prompt taiyar — GO dabayein.';
             frame.appendChild(p);
         }
     }
@@ -838,7 +896,7 @@ function createStudioRow(item, kind, onUpdate) {
         item.prompt = promptVal;
         if (!promptVal) {
             item.status = 'error';
-            item.errorMsg = 'Prompt खाली है।';
+            item.errorMsg = 'Prompt khali hai.';
             persistLabData();
             paintOutput();
             scheduleAutoRetry();
@@ -850,7 +908,7 @@ function createStudioRow(item, kind, onUpdate) {
                 await openGpuConnectPopup(false);
             } catch (popupErr) {
                 item.status = 'error';
-                item.errorMsg = popupErr?.message || 'Endpoint URL सेव करना ज़रूरी है।';
+                item.errorMsg = popupErr?.message || 'Endpoint URL save karna zaroori hai.';
                 persistLabData();
                 paintOutput();
                 return;
@@ -882,7 +940,7 @@ function createStudioRow(item, kind, onUpdate) {
             onUpdate();
         } catch (err) {
             item.status = 'error';
-            item.errorMsg = err?.message || 'रेंडर फेल हुआ।';
+            item.errorMsg = err?.message || 'Render fail hua.';
             persistLabData();
             paintOutput();
             scheduleAutoRetry();
@@ -940,7 +998,7 @@ function renderAllSections() {
         if (!labData.characters.length) {
             const empty = document.createElement('div');
             empty.className = 'output-placeholder';
-            empty.textContent = 'कैरेक्टर रेफरेंस प्रॉम्प्ट आते ही यहाँ बॉक्स अपने आप बन जाएंगे।';
+            empty.textContent = 'Character reference prompt aate hi yahan box apne aap ban jayenge.';
             charContainer.appendChild(empty);
         } else {
             labData.characters.forEach((charItem) => {
@@ -954,7 +1012,7 @@ function renderAllSections() {
         if (!labData.photos.length) {
             const empty = document.createElement('div');
             empty.className = 'output-placeholder';
-            empty.textContent = 'सीन फ़ोटो प्रॉम्प्ट आते ही यहाँ फ़ोटो बॉक्स अपने आप बन जाएंगे।';
+            empty.textContent = 'Scene photo prompt aate hi yahan photo box apne aap ban jayenge.';
             photoContainer.appendChild(empty);
         } else {
             labData.photos.forEach((photoItem) => {
@@ -968,7 +1026,7 @@ function renderAllSections() {
         if (!labData.scenes.length) {
             const empty = document.createElement('div');
             empty.className = 'output-placeholder';
-            empty.textContent = 'वीडियो सेक्शन अभी खाली है (ताकि खिचड़ी न बने)।';
+            empty.textContent = 'Video section abhi khali hai.';
             sceneContainer.appendChild(empty);
         } else {
             labData.scenes.forEach((sceneItem) => {
@@ -1037,7 +1095,7 @@ function triggerImportLabJsonFile() {
                 const parsed = JSON.parse(String(reader.result || '{}'));
                 applyImportedJsonData(parsed);
             } catch (err) {
-                alert('JSON फ़ाइल पढ़ने में दिक्कत आई: ' + (err?.message || err));
+                alert('JSON file padhne mein dikkat aayi: ' + (err?.message || err));
             }
         };
         reader.readAsText(file);
@@ -1058,7 +1116,6 @@ function triggerAllGoInContainer(containerId) {
     goButtons.forEach((btn) => btn.click());
 }
 
-// 1. सिर्फ़ Character Reference Photos चलाएं और वहीं रुक जाएं (आगे का कोई फंक्शन नहीं चलेगा)
 async function runCharGoAllOnly() {
     try {
         await ensureGpuReadyBeforeBatch();
@@ -1069,7 +1126,6 @@ async function runCharGoAllOnly() {
     triggerAllGoInContainer('charRefRowsContainer');
 }
 
-// 2. सिर्फ़ Scene Photos चलाएं और वहीं रुक जाएं (वीडियो सेक्शन अपने-आप नहीं चलेगा)
 async function runPhotoGoAllOnly() {
     try {
         await ensureGpuReadyBeforeBatch();
@@ -1081,7 +1137,6 @@ async function runPhotoGoAllOnly() {
     triggerAllGoInContainer('scenePhotoRowsContainer');
 }
 
-// 3. सिर्फ़ Scene Video Steps चलाएं
 async function runVideoGoAllOnly() {
     try {
         await ensureGpuReadyBeforeBatch();
