@@ -791,21 +791,23 @@ async function executePromptTurn(overrideText = '', forcedPhase = null, displayO
     const rawInput = (overrideText || chatInput.value).trim();
     if (!rawInput) return;
 
-    const isAutoInternalTrigger = Boolean(overrideText);
-    const userRequestedPrompts = !isAutoInternalTrigger && isPromptRequestText(rawInput);
+    // केवल वही कॉल ऑटो-पाइपलाइन मानी जाएगी जो मास्टर सेटिंग/टाइमर या इंटरनल स्टेप से ट्रिगर हुई हो
+    const isAutoPipelineTrigger = Boolean(overrideText);
+    const userRequestedPrompts = !isAutoPipelineTrigger && isPromptRequestText(rawInput);
 
-    let phaseWhenSent = forcedPhase || (currentProcessPhase === 'idle' ? 'story_generation' : currentProcessPhase);
+    // मैन्युअल सामान्य चैट (जैसे "Hi", "Hello", सामान्य बात) में ऑटो कहानी/स्प्लिट चेन कभी नहीं चलेगी
+    let phaseWhenSent = forcedPhase || (isAutoPipelineTrigger ? 'story_generation' : 'normal_chat');
     if (userRequestedPrompts) {
         phaseWhenSent = 'character_ref_prompt';
     }
     currentProcessPhase = phaseWhenSent;
 
     // चैट में सिर्फ़ साफ़ टेक्स्ट दिखना चाहिए—लंबा सिस्टम/ऑटो-प्रॉम्प्ट नहीं
-    const visibleChatText = displayOverride || (isAutoInternalTrigger ? '' : rawInput);
+    const visibleChatText = displayOverride || (isAutoPipelineTrigger ? '' : rawInput);
     if (visibleChatText) {
         appendMessage(visibleChatText, 'user', true, phaseWhenSent, true);
     }
-    if (!isAutoInternalTrigger) chatInput.value = '';
+    if (!isAutoPipelineTrigger) chatInput.value = '';
 
     // API को भेजने वाला असली कंटेंट तैयार करें
     let apiUserContent = rawInput;
@@ -867,7 +869,9 @@ async function executePromptTurn(overrideText = '', forcedPhase = null, displayO
 
     const systemInstruction = isPromptPhase
         ? `You are AGC.AI Core. ${GEMINI_STYLE_MASTER_RULES}\nWrite EVERY prompt strictly in clean, detailed ENGLISH without "None" or "N/A".`
-        : `You are AGC.AI Core, an expert YouTube scriptwriter. ${GEMINI_STYLE_MASTER_RULES}\nWrite complete, detailed, and engaging scripts with character dialogues in HINDI.`;
+        : phaseWhenSent === 'normal_chat'
+            ? "You are AGC.AI Core, a helpful AI assistant. Reply naturally and concisely in HINDI (or the user's language)."
+            : `You are AGC.AI Core, an expert YouTube scriptwriter. ${GEMINI_STYLE_MASTER_RULES}\nWrite complete, detailed, and engaging scripts with character dialogues in HINDI.`;
 
     const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
     let finalResponse = null;
@@ -941,12 +945,13 @@ async function executePromptTurn(overrideText = '', forcedPhase = null, displayO
                 'video'
             );
         } else {
-            appendMessage(finalResponse, 'ai', true, phaseWhenSent, true);
+            appendMessage(finalResponse, 'ai', phaseWhenSent !== 'normal_chat', phaseWhenSent, true);
         }
 
         const isSplitterON = localStorage.getItem('agc_auto_split_active') === 'true';
         const isCharRefToggleON = localStorage.getItem(CHAR_REF_TOGGLE_KEY) === 'true';
 
+        // केवल टाइमर/मास्टर सेटिंग से आई कहानी पर ही ऑटो-स्प्लिट और प्रॉम्प्ट चेन चलेगी
         if (phaseWhenSent === 'story_generation' && isSplitterON) {
             const splitPrompt = `[AUTO_SCENE_SPLITTER]: नीचे दी गई स्क्रिप्ट को Scene 1, Scene 2, Scene 3... में अलग-अलग तोड़ें:
 
@@ -1011,6 +1016,7 @@ ${finalResponse}
             syncSceneStepsToLab1(finalResponse, activeSessionId);
             currentProcessPhase = 'idle';
         } else {
+            // सामान्य चैट ("Hi" आदि) के बाद सीधा idle पर लौटें
             currentProcessPhase = 'idle';
         }
     } else {
@@ -1022,9 +1028,10 @@ ${finalResponse}
 }
 
 if (sendChatBtn && chatInput && chatMessages) {
-    sendChatBtn.addEventListener('click', () => executePromptTurn('', currentProcessPhase === 'idle' ? 'story_generation' : currentProcessPhase));
+    // मैन्युअल सेंड / Enter दबाने पर 'normal_chat' पास करें ताकि सामान्य मैसेज पर ऑटो-स्क्रिप्ट चेन न चले
+    sendChatBtn.addEventListener('click', () => executePromptTurn('', 'normal_chat'));
     chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') executePromptTurn('', currentProcessPhase === 'idle' ? 'story_generation' : currentProcessPhase);
+        if (e.key === 'Enter') executePromptTurn('', 'normal_chat');
     });
 }
 
