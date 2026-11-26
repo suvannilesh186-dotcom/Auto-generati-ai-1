@@ -514,6 +514,120 @@ function bindGpuLabHeaderTrigger() {
     }
 }
 
+function bindBackNavigationButton() {
+    const backCandidates = Array.from(
+        document.querySelectorAll('button, a, span, div')
+    ).filter((el) => {
+        if (el.id === 'agcOneTimeGpuModal' || el.closest('#agcOneTimeGpuModal')) return false;
+        const txt = (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        const idOrClass = `${el.id || ''} ${el.className || ''}`.toLowerCase();
+        return (
+            txt === '← dashboard' ||
+            txt === 'dashboard' ||
+            txt === '← back' ||
+            txt === 'back' ||
+            idOrClass.includes('back-btn') ||
+            idOrClass.includes('backbtn')
+        );
+    });
+
+    backCandidates.forEach((btn) => {
+        if (btn.dataset.agcBackBound === '1') return;
+        btn.dataset.agcBackBound = '1';
+        btn.style.cursor = 'pointer';
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            try {
+                localStorage.setItem(ACTIVE_SESSION_KEY, sessionId);
+            } catch (_) {}
+
+            if (window.history.length > 1 && document.referrer) {
+                window.history.back();
+            } else {
+                window.location.assign('dashboard.html');
+            }
+        });
+    });
+}
+
+// =========================================================
+// CHARACTER DETECTOR FOR MULTI-CHARACTER SCENES
+// =========================================================
+
+function extractCharacterKeywords(charItem, index = 0) {
+    const rawLabel = (charItem?.label || '')
+        .replace(/^स्टेप\s*\d+\s*:\s*/i, '')
+        .replace(/^character\s*\d*\s*:\s*/i, '')
+        .trim();
+
+    const mainName = rawLabel.split(/[(-]/)[0].trim().toLowerCase();
+    const promptLower = (charItem?.prompt || '').toLowerCase();
+
+    const tokens = new Set();
+    if (mainName && mainName.length >= 2) {
+        tokens.add(mainName);
+        mainName.split(/\s+/).forEach((w) => {
+            if (w.length >= 2) tokens.add(w);
+        });
+    }
+
+    const knownAliases = [
+        ['aryan', 'आर्यन'],
+        ['nobita', 'नोबिता'],
+        ['doraemon', 'डोरेमोन'],
+        ['shizuka', 'शिजुका'],
+        ['gian', 'जियान'],
+        ['suneo', 'सुनिओ', 'सुनियो'],
+        ['wizard', 'जादूगर'],
+        ['sia', 'सिया']
+    ];
+
+    knownAliases.forEach((group) => {
+        const matchedInChar = group.some(
+            (term) => mainName.includes(term.toLowerCase()) || promptLower.includes(term.toLowerCase())
+        );
+        if (matchedInChar) {
+            group.forEach((term) => tokens.add(term.toLowerCase()));
+        }
+    });
+
+    return {
+        index,
+        label: rawLabel || `Character ${index + 1}`,
+        imageUrl: charItem?.imageUrl || '',
+        tokens: Array.from(tokens)
+    };
+}
+
+function detectCharactersInSceneText(sceneText = '', fallbackIdx = 0) {
+    const renderedChars = labData.characters
+        .map((c, idx) => extractCharacterKeywords(c, idx))
+        .filter((c) => Boolean(c.imageUrl));
+
+    if (!renderedChars.length) {
+        return { matched: [], allRendered: [] };
+    }
+
+    const haystack = (sceneText || '').toLowerCase();
+    const matched = renderedChars.filter((ch) =>
+        ch.tokens.some((tok) => tok && haystack.includes(tok))
+    );
+
+    if (matched.length > 0) {
+        return { matched, allRendered: renderedChars };
+    }
+
+    if (renderedChars.length === 1) {
+        return { matched: [renderedChars[0]], allRendered: renderedChars };
+    }
+
+    const safeIdx = fallbackIdx % renderedChars.length;
+    return { matched: [], allRendered: renderedChars, suggestedIdx: safeIdx };
+}
+
 function resolveRenderSize(promptText = '', kind = '') {
     if (kind === 'character_reference') {
         return '1344x768';
@@ -533,19 +647,40 @@ function resolveRenderSize(promptText = '', kind = '') {
     return '1344x768';
 }
 
-function formatPromptForRender(promptText, kind) {
+function buildDetectedRefContextNote(allRefUrls = [], refImageUrl = '') {
+    const list = Array.isArray(allRefUrls) && allRefUrls.length
+        ? allRefUrls
+        : (refImageUrl ? [refImageUrl] : []);
+    if (!list.length) return '';
+
+    const matchedCharNames = labData.characters
+        .filter((c) => Boolean(c.imageUrl) && list.includes(c.imageUrl))
+        .map((c, idx) => {
+            const cleanName = (c.label || `Character ${idx + 1}`)
+                .replace(/^स्टेप\s*\d+\s*:\s*/i, '')
+                .replace(/^character\s*\d*\s*:\s*/i, '')
+                .trim();
+            return `${idx + 1}. ${cleanName}`;
+        });
+
+    const namesText = matchedCharNames.length ? ` (${matchedCharNames.join(', ')})` : '';
+    return ` Attached ${list.length} detected reference sheet(s)${namesText} — place ONLY the detected character(s) into the requested pose, action, and background without mixing unrelated characters.`;
+}
+
+function formatPromptForRender(promptText, kind, refImageUrl = '', allRefUrls = []) {
     const clean = (promptText || '').trim();
     const qualityBoost = 'high detail, sharp focus, clean lighting, crisp edges, natural proportions, no blur, no distortion, no watermark';
+    const refNote = buildDetectedRefContextNote(allRefUrls, refImageUrl);
 
     if (kind === 'character_reference') {
         return `${clean} Clean wide horizontal 16:9 character turnaround sheet on a solid light grey studio background, top row showing separated full-body poses (Front, Side Profile, Back, Three-Quarter) spaced apart with no overlapping heads or stacked faces, bottom row showing separate expression faces (Happy, Sad, Angry, Surprised), ${qualityBoost}.`;
     }
 
     if (kind === 'scene_photo') {
-        return `${clean} Widescreen 16:9 YouTube scene frame using the exact locked character appearance from reference while updating pose, action, and background, ${qualityBoost}.`;
+        return `${clean} Widescreen 16:9 YouTube scene frame using the exact locked character appearance from reference while updating pose, action, and background,${refNote} ${qualityBoost}.`;
     }
 
-    return `${clean} ${qualityBoost}.`;
+    return `${clean}${refNote} ${qualityBoost}.`;
 }
 
 async function requestSingleGpuRender(endpoint, headers, bodyPayload) {
@@ -600,7 +735,12 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
         headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    const finalPrompt = formatPromptForRender(promptText, kind);
+    const attachedRefs = Array.isArray(allRefUrls) && allRefUrls.length
+        ? allRefUrls
+        : (refImageUrl ? [refImageUrl] : []);
+    const primaryRef = refImageUrl || attachedRefs[0] || '';
+
+    const finalPrompt = formatPromptForRender(promptText, kind, primaryRef, attachedRefs);
     const primarySize = resolveRenderSize(promptText, kind);
     const primaryModel = meta.model || DEFAULT_AICREDITS_IMAGE_MODEL;
     const isImagesEndpoint = /\/images\/generations/i.test(endpoint);
@@ -618,15 +758,17 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
                   model: attempt.model,
                   prompt: finalPrompt,
                   n: 1,
-                  size: attempt.size
+                  size: attempt.size,
+                  reference_image: primaryRef || null,
+                  reference_images: attachedRefs
               }
             : {
                   kind,
                   prompt: finalPrompt,
                   size: attempt.size,
                   model: attempt.model,
-                  referenceImage: refImageUrl || null,
-                  referenceImages: Array.isArray(allRefUrls) ? allRefUrls : (refImageUrl ? [refImageUrl] : [])
+                  referenceImage: primaryRef || null,
+                  referenceImages: attachedRefs
               };
 
         try {
@@ -644,38 +786,24 @@ function isVideoMediaUrl(url = '') {
 }
 
 function syncReferenceImagesToScenes() {
-    const charItemsWithImg = labData.characters.filter((c) => Boolean(c.imageUrl));
-    const charRefs = charItemsWithImg.map((c) => c.imageUrl);
     const scenePhotos = labData.photos.map((p) => p.imageUrl).filter(Boolean);
 
-    const findBestRefForText = (promptText = '', fallbackIdx = 0) => {
-        if (!charItemsWithImg.length) return '';
-        const lowerPrompt = (promptText || '').toLowerCase();
-
-        for (const ch of charItemsWithImg) {
-            const cleanLabel = (ch.label || '')
-                .replace(/^स्टेप\s*\d+\s*:\s*/i, '')
-                .replace(/^character\s*\d*\s*:\s*/i, '')
-                .split('(')[0]
-                .trim()
-                .toLowerCase();
-
-            if (cleanLabel && cleanLabel.length >= 2 && lowerPrompt.includes(cleanLabel)) {
-                return ch.imageUrl;
-            }
-        }
-
-        return charRefs[fallbackIdx % charRefs.length] || '';
-    };
-
     labData.photos.forEach((ph, idx) => {
-        ph.allRefUrls = charRefs;
+        const combinedText = `${ph.label || ''} ${ph.prompt || ''}`;
+        const detected = detectCharactersInSceneText(combinedText, idx);
+
         if (ph.manualRefUrl) {
+            ph.detectedCharacters = detected.matched.map((m) => m.label);
+            ph.allRefUrls = [ph.manualRefUrl];
             ph.activeRefUrl = ph.manualRefUrl;
-        } else if (typeof ph.refIndex === 'number' && labData.characters[ph.refIndex]?.imageUrl) {
-            ph.activeRefUrl = labData.characters[ph.refIndex].imageUrl;
+        } else if (detected.matched.length > 0) {
+            ph.detectedCharacters = detected.matched.map((m) => m.label);
+            ph.allRefUrls = detected.matched.map((m) => m.imageUrl);
+            ph.activeRefUrl = ph.allRefUrls[0] || '';
         } else {
-            ph.activeRefUrl = findBestRefForText(ph.prompt, idx);
+            ph.detectedCharacters = [];
+            ph.allRefUrls = [];
+            ph.activeRefUrl = '';
         }
     });
 
@@ -694,9 +822,11 @@ function syncReferenceImagesToScenes() {
             matchedPhotoUrl = scenePhotos[idx % scenePhotos.length];
         }
 
+        const detected = detectCharactersInSceneText(`${sc.label || ''} ${sc.prompt || ''}`, idx);
+        sc.detectedCharacters = detected.matched.map((m) => m.label);
         sc.sourcePhotoUrl = matchedPhotoUrl;
-        sc.allRefUrls = charRefs;
-        sc.activeRefUrl = matchedPhotoUrl || findBestRefForText(sc.prompt, idx);
+        sc.allRefUrls = matchedPhotoUrl ? [matchedPhotoUrl] : detected.matched.map((m) => m.imageUrl);
+        sc.activeRefUrl = matchedPhotoUrl || (detected.matched[0]?.imageUrl || '');
     });
 }
 
@@ -717,7 +847,8 @@ function createStudioRow(item, kind, onUpdate) {
     if (kind === 'photo' || kind === 'scene') {
         const refBadge = document.createElement('span');
         refBadge.className = 'ref-badge';
-        refBadge.textContent = item.activeRefUrl ? 'Ref Photo Linked ✓' : 'Waiting for Ref Photo';
+        const refCount = Array.isArray(item.allRefUrls) && item.allRefUrls.length ? item.allRefUrls.length : (item.activeRefUrl ? 1 : 0);
+        refBadge.textContent = refCount > 0 ? `${refCount} Ref Photo(s) Linked ✓` : 'Waiting for Ref Photo';
         labelRow.appendChild(refBadge);
     }
 
@@ -988,6 +1119,7 @@ function renderAllSections() {
     syncReferenceImagesToScenes();
     persistLabData();
     bindGpuLabHeaderTrigger();
+    bindBackNavigationButton();
 
     const charContainer = document.getElementById('charRefRowsContainer');
     const photoContainer = document.getElementById('scenePhotoRowsContainer');
@@ -1151,6 +1283,7 @@ async function runVideoGoAllOnly() {
 document.addEventListener('DOMContentLoaded', () => {
     renderAllSections();
     bindGpuLabHeaderTrigger();
+    bindBackNavigationButton();
 });
 
 document.getElementById('goAllCharBtn')?.addEventListener('click', runCharGoAllOnly);
