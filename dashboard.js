@@ -791,25 +791,24 @@ async function executePromptTurn(overrideText = '', forcedPhase = null, displayO
     const rawInput = (overrideText || chatInput.value).trim();
     if (!rawInput) return;
 
-    // केवल वही कॉल ऑटो-पाइपलाइन मानी जाएगी जो मास्टर सेटिंग/टाइमर या इंटरनल स्टेप से ट्रिगर हुई हो
-    const isAutoPipelineTrigger = Boolean(overrideText);
-    const userRequestedPrompts = !isAutoPipelineTrigger && isPromptRequestText(rawInput);
+    const isInternalAutoStep = Boolean(overrideText);
+    const isManualNormalChat = forcedPhase === 'normal_chat' && !isInternalAutoStep;
+    const userRequestedPrompts = isManualNormalChat && isPromptRequestText(rawInput);
 
-    // मैन्युअल सामान्य चैट (जैसे "Hi", "Hello", सामान्य बात) में ऑटो कहानी/स्प्लिट चेन कभी नहीं चलेगी
-    let phaseWhenSent = forcedPhase || (isAutoPipelineTrigger ? 'story_generation' : 'normal_chat');
+    // सामान्य मैन्युअल बातचीत ('normal_chat') में ऑटो कहानी-चेन नहीं चलेगी;
+    // बाकी हर ट्रिगर (मास्टर सेटिंग टाइमर, postMessage, या स्क्रिप्ट क्लिक) में पूरी चेन चलेगी
+    let phaseWhenSent = forcedPhase || 'story_generation';
     if (userRequestedPrompts) {
         phaseWhenSent = 'character_ref_prompt';
     }
     currentProcessPhase = phaseWhenSent;
 
-    // चैट में सिर्फ़ साफ़ टेक्स्ट दिखना चाहिए—लंबा सिस्टम/ऑटो-प्रॉम्प्ट नहीं
-    const visibleChatText = displayOverride || (isAutoPipelineTrigger ? '' : rawInput);
+    const visibleChatText = displayOverride || (isInternalAutoStep ? '' : rawInput);
     if (visibleChatText) {
         appendMessage(visibleChatText, 'user', true, phaseWhenSent, true);
     }
-    if (!isAutoPipelineTrigger) chatInput.value = '';
+    if (!isInternalAutoStep) chatInput.value = '';
 
-    // API को भेजने वाला असली कंटेंट तैयार करें
     let apiUserContent = rawInput;
     if (userRequestedPrompts) {
         const storyCtx = (latestSplitScenesText || latestStoryText || '').trim();
@@ -951,7 +950,6 @@ async function executePromptTurn(overrideText = '', forcedPhase = null, displayO
         const isSplitterON = localStorage.getItem('agc_auto_split_active') === 'true';
         const isCharRefToggleON = localStorage.getItem(CHAR_REF_TOGGLE_KEY) === 'true';
 
-        // केवल टाइमर/मास्टर सेटिंग से आई कहानी पर ही ऑटो-स्प्लिट और प्रॉम्प्ट चेन चलेगी
         if (phaseWhenSent === 'story_generation' && isSplitterON) {
             const splitPrompt = `[AUTO_SCENE_SPLITTER]: नीचे दी गई स्क्रिप्ट को Scene 1, Scene 2, Scene 3... में अलग-अलग तोड़ें:
 
@@ -1016,7 +1014,6 @@ ${finalResponse}
             syncSceneStepsToLab1(finalResponse, activeSessionId);
             currentProcessPhase = 'idle';
         } else {
-            // सामान्य चैट ("Hi" आदि) के बाद सीधा idle पर लौटें
             currentProcessPhase = 'idle';
         }
     } else {
@@ -1028,10 +1025,17 @@ ${finalResponse}
 }
 
 if (sendChatBtn && chatInput && chatMessages) {
-    // मैन्युअल सेंड / Enter दबाने पर 'normal_chat' पास करें ताकि सामान्य मैसेज पर ऑटो-स्क्रिप्ट चेन न चले
-    sendChatBtn.addEventListener('click', () => executePromptTurn('', 'normal_chat'));
+    // e.isTrusted === true का मतलब असली इंसान ने खुद क्लिक/Enter दबाया है -> 'normal_chat' (कोई ऑटो चेन नहीं)
+    // e.isTrusted === false का मतलब मास्टर सेटिंग/टाइमर स्क्रिप्ट ने प्रोग्राम से बटन दबाया है -> 'story_generation' (पूरी चेन चलेगी)
+    sendChatBtn.addEventListener('click', (e) => {
+        const phase = e && e.isTrusted === false ? 'story_generation' : 'normal_chat';
+        executePromptTurn('', phase);
+    });
     chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') executePromptTurn('', 'normal_chat');
+        if (e.key === 'Enter') {
+            const phase = e && e.isTrusted === false ? 'story_generation' : 'normal_chat';
+            executePromptTurn('', phase);
+        }
     });
 }
 
@@ -1052,23 +1056,39 @@ window.addEventListener('click', (e) => {
     if (e.target === settingsModal) { settingsModal.style.display = 'none'; }
 });
 
+function startScheduledStoryPipeline(incomingPrompt = '', modeTag = 'scheduled') {
+    const promptToRun = (incomingPrompt || '').trim() || (
+        modeTag === 'short'
+            ? 'एक मजेदार और भावनात्मक 1 मिनट की कहानी लिखें।'
+            : 'एक दमदार और रोचक कहानी लिखें।'
+    );
+
+    activeSessionId = 'session_' + Date.now();
+    localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
+    currentSessionMessages = [];
+    latestStoryText = '';
+    latestSplitScenesText = '';
+    latestCharRefPromptsText = '';
+    latestScenePhotoPromptsText = '';
+    saveLab1AutoItems(activeSessionId, { characters: [], photos: [], scenes: [] });
+
+    executePromptTurn(promptToRun, 'story_generation');
+}
+
+window.triggerAgcAutoStory = startScheduledStoryPipeline;
+
 window.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || typeof data !== 'object') return;
+
     if (
-        event.data &&
-        (
-            event.data.type === 'AUTO_TRIGGER_PROMPT' ||
-            event.data.type === 'AUTO_TRIGGER_PROMPT_SHORT' ||
-            event.data.type === 'AUTO_TRIGGER_PROMPT_LONG'
-        )
+        data.type === 'AUTO_TRIGGER_PROMPT' ||
+        data.type === 'AUTO_TRIGGER_PROMPT_SHORT' ||
+        data.type === 'AUTO_TRIGGER_PROMPT_LONG'
     ) {
-        activeSessionId = 'session_' + Date.now();
-        localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
-        currentSessionMessages = [];
-        latestStoryText = '';
-        latestSplitScenesText = '';
-        latestCharRefPromptsText = '';
-        latestScenePhotoPromptsText = '';
-        saveLab1AutoItems(activeSessionId, { characters: [], photos: [], scenes: [] });
-        executePromptTurn(event.data.prompt, 'story_generation');
+        const mode =
+            data.type === 'AUTO_TRIGGER_PROMPT_SHORT' ? 'short' :
+            data.type === 'AUTO_TRIGGER_PROMPT_LONG' ? 'long' : 'auto';
+        startScheduledStoryPipeline(data.prompt || data.text || '', mode);
     }
 });
