@@ -1045,19 +1045,6 @@ function triggerImportLabJsonFile() {
     input.click();
 }
 
-async function waitForSectionCompletion(itemsList, timeoutMs = 180000) {
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-        const withPrompts = itemsList.filter((it) => (it.prompt || '').trim().length > 0);
-        if (!withPrompts.length) return true;
-        if (withPrompts.every((it) => it.status === 'done' && Boolean(it.imageUrl))) {
-            return true;
-        }
-        await new Promise((r) => setTimeout(r, 800));
-    }
-    return false;
-}
-
 async function ensureGpuReadyBeforeBatch() {
     if (!getSavedGpuEndpoint()) {
         await openGpuConnectPopup(false);
@@ -1071,7 +1058,8 @@ function triggerAllGoInContainer(containerId) {
     goButtons.forEach((btn) => btn.click());
 }
 
-async function runCharGoAllAutoChain() {
+// 1. सिर्फ़ Character Reference Photos चलाएं और वहीं रुक जाएं (आगे का कोई फंक्शन नहीं चलेगा)
+async function runCharGoAllOnly() {
     try {
         await ensureGpuReadyBeforeBatch();
     } catch (_) {
@@ -1079,27 +1067,10 @@ async function runCharGoAllAutoChain() {
     }
 
     triggerAllGoInContainer('charRefRowsContainer');
-    const charsReady = await waitForSectionCompletion(labData.characters);
-    if (!charsReady) return;
-
-    renderAllSections();
-    await new Promise((r) => setTimeout(r, 300));
-
-    if (labData.photos.some((p) => (p.prompt || '').trim())) {
-        triggerAllGoInContainer('scenePhotoRowsContainer');
-        const photosReady = await waitForSectionCompletion(labData.photos);
-        if (!photosReady) return;
-
-        renderAllSections();
-        await new Promise((r) => setTimeout(r, 300));
-
-        if (labData.scenes.some((s) => (s.prompt || '').trim())) {
-            triggerAllGoInContainer('sceneVideoRowsContainer');
-        }
-    }
 }
 
-async function runPhotoGoAllAutoChain() {
+// 2. सिर्फ़ Scene Photos चलाएं और वहीं रुक जाएं (वीडियो सेक्शन अपने-आप नहीं चलेगा)
+async function runPhotoGoAllOnly() {
     try {
         await ensureGpuReadyBeforeBatch();
     } catch (_) {
@@ -1108,18 +1079,10 @@ async function runPhotoGoAllAutoChain() {
 
     renderAllSections();
     triggerAllGoInContainer('scenePhotoRowsContainer');
-    const photosReady = await waitForSectionCompletion(labData.photos);
-    if (!photosReady) return;
-
-    renderAllSections();
-    await new Promise((r) => setTimeout(r, 300));
-
-    if (labData.scenes.some((s) => (s.prompt || '').trim())) {
-        triggerAllGoInContainer('sceneVideoRowsContainer');
-    }
 }
 
-async function runVideoGoAllAutoChain() {
+// 3. सिर्फ़ Scene Video Steps चलाएं
+async function runVideoGoAllOnly() {
     try {
         await ensureGpuReadyBeforeBatch();
     } catch (_) {
@@ -1135,6 +1098,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bindGpuLabHeaderTrigger();
 });
 
-document.getElementById('goAllCharBtn')?.addEventListener('click', runCharGoAllAutoChain);
-document.getElementById('goAllPhotoBtn')?.addEventListener('click', runPhotoGoAllAutoChain);
-document.getElementById('goAllVideoBtn')?.addEventListener('click', runVideoGoAllAutoChain);
+document.getElementById('goAllCharBtn')?.addEventListener('click', runCharGoAllOnly);
+document.getElementById('goAllPhotoBtn')?.addEventListener('click', runPhotoGoAllOnly);
+document.getElementById('goAllVideoBtn')?.addEventListener('click', runVideoGoAllOnly);
