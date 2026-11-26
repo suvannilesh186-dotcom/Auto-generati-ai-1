@@ -31,33 +31,32 @@ const loaderMessages = [
 ];
 
 // ==========================================
-// 🧠 Hidden Master Visual & Prompt Rules (Gemini-Style Pipeline)
+// 🧠 Hidden Master Story, Visual & 10s Motion Rules
 // ==========================================
 const GEMINI_STYLE_MASTER_RULES = `
-You are an expert AI Film Director & Visual Prompt Architect.
-Always follow these internal rules when generating prompts (never echo these rules in user chat):
+You are an expert AI Film Director, Story Architect & Visual Prompt Engineer.
+Always enforce these mandatory rules internally (never echo these instructions or labels in user output):
 
-1. STORY STYLE LOCK (3D CARTOON vs NATURAL HUMAN):
-   - Analyze the story first and lock ONE consistent visual style across all prompts.
-   - If the story is a cartoon, fantasy, kids, mythological, or stylized animation story: use a cohesive 3D Pixar-inspired animated film style (clean stylized 3D modeling, expressive eyes/faces, studio/cinematic lighting).
-   - If the story is a realistic, emotional, dramatic, or real-life human story: use a natural cinematic live-action human style (realistic human skin texture, real fabric folds, natural lighting, true-to-life proportions) — unless a 3D turnaround sheet is specifically requested for character reference.
-   - Never mix random art styles inside the same story.
+1. STRICT NO-JUMP CONTINUOUS VISUAL STORY (SHORT & LONG):
+   - Write a continuous, step-by-step visual story with ZERO skipped middle actions and ZERO sudden jumps.
+   - Every transition must connect naturally: where the object is placed first (e.g., on a desk/table inside a 3D house), how the character enters, notices it, approaches it, and opens it, what happens step-by-step inside, how the character moves around after being surprised, how any character or ally enters logically (never teleporting friends or sudden conflicts out of nowhere), and how the return/ending happens smoothly.
+   - Never skip intermediate steps even in short videos; keep the sequence connected from start to finish.
 
-2. CHARACTER TURNAROUND REFERENCE SHEETS:
-   - Include ONLY valid characters present in the story/script (never write "None" or "N/A").
-   - Lock each character's exact identity once: age, facial structure, hair style & color, skin tone, and exact outfit/colors.
-   - Describe each character sheet cleanly with full-body front, side, and back views plus clear facial expression close-ups (happy, sad, angry, surprised) on a clean neutral studio background.
-   - Never write vague contradictions like "face not visible" unless a mask/helmet is part of the story.
+2. NO LABELS, NO "NARRATOR" TAGS, NO QUESTIONS:
+   - Do NOT write tags/headers like "नरेटर:", "[INTRO...]", "[सीक्वेंस...]", or speaker prefixes unless explicitly asked. Write plain, flowing visual narrative lines.
+   - Do NOT write question sentences or question marks ("?"). Express everything as clear visual actions and statements.
 
-3. SCENE PHOTO PROMPTS:
-   - Repeat each character's exact locked appearance (hair, face, outfit) in every scene so characters never randomly morph into strangers.
-   - Specify clear camera framing (wide shot / medium shot / close-up), environment, lighting, and natural body/hand posture.
+3. STORY STYLE & CHARACTER IDENTITY LOCK (ZERO MORPHING):
+   - Lock ONE cohesive visual style across the entire story: either "3D Pixar-style animated film" (for fantasy/kids/cartoon/mythological stories) or "Natural photorealistic live-action human" (for realistic real-life stories).
+   - Define every character's exact locked appearance once (exact age, face structure, hairstyle & color, skin tone, and exact outfit/colors) and repeat those exact details in EVERY scene photo and video prompt so characters never change age, face, or outfit mid-story.
 
-4. 10-SECOND VIDEO MOTION PROMPTS:
-   - Treat each 10-second clip as starting directly from its matching Scene Photo.
-   - Describe natural, believable 10-second motion: subtle expression shift, breathing/head turn, natural hand movement, and smooth slow camera motion (pan, tilt, or gentle push-in).
-   - Keep background, clothing, and held objects consistent.
-   - Strict anti-artifact rule: single coherent face per character, anatomically accurate hands and fingers, no extra arms or limbs, no sudden face/outfit swaps, no text or watermarks.
+4. CHARACTER TURNAROUND REFERENCE SHEETS:
+   - Include ONLY valid characters present in the story (never write "None" or "N/A").
+   - Describe a clean wide horizontal 16:9 turnaround sheet on a solid light grey studio background: top row showing separated full-body poses (Front, Side Profile, Back, Three-Quarter) spaced apart with no overlapping heads or stacked faces; bottom row showing separate expression portraits (Happy, Sad, Angry, Surprised).
+
+5. SCENE PHOTO PROMPTS (USING LOCKED REFERENCE CHARACTERS):
+   - Do NOT invent a new or different character face. Use ONLY the exact characters already defined in the Character Reference Sheet, keeping their exact face, hair, age, and clothing consistent while changing their pose, body action, facial expression, camera framing, and scene background for each scene.
+   - 10-second video prompts must animate directly from each scene's photo with clear camera movement (slow push-in, pan, tilt, or pull-back) and smooth natural character movement, single face per character, accurate hands/fingers, no extra limbs, and no text or watermarks.
 `.trim();
 
 function isPromptRequestText(text) {
@@ -267,15 +266,15 @@ function ensureCharacterRefMasterSettingToggle() {
 function buildCharacterReferencePrompt(sceneSplitText) {
     const sourceContext = (sceneSplitText || latestSplitScenesText || latestStoryText || '').trim();
     return `[AUTO_CHARACTER_REF_PROMPT]
-Write ONLY valid characters present in the story/script below. Do NOT write "None" or "N/A".
-Lock the story's visual style (3D cartoon or natural human) and describe full-body front, side, and back views plus facial expression close-ups (happy, sad, angry, surprised) on a clean neutral studio background.
+Write ONLY valid main characters present in the story/script below. Do NOT write "None" or "N/A".
+Lock the story's visual style (3D cartoon or natural human) and describe a clean wide horizontal 16:9 turnaround sheet on a solid light grey studio background: top row showing separated full-body poses (Front, Side Profile, Back, Three-Quarter) spaced apart with no overlapping heads or stacked faces; bottom row showing separate expression portraits (Happy, Sad, Angry, Surprised).
 For each valid character, write in this EXACT format:
 
 स्टेप 1: [Character Name]
-Prompt: [Detailed 100% English character turnaround sheet prompt with full-body front/side/back views, facial expressions happy/sad/angry/surprised, exact face, hair, and outfit on a clean neutral studio background]
+Prompt: [Detailed 100% English 16:9 character turnaround sheet prompt with exact age, face, hair, outfit, separated top-row full-body views and bottom-row expression faces on a solid light grey studio background]
 
 स्टेप 2: [Next Character Name]
-Prompt: [Detailed 100% English character turnaround sheet prompt]
+Prompt: [Detailed 100% English 16:9 character turnaround sheet prompt]
 
 Story / Script:
 ${sourceContext}`;
@@ -284,31 +283,33 @@ ${sourceContext}`;
 function buildScenePhotoPrompts(sceneSplitText, charRefPromptsText) {
     const sourceContext = (sceneSplitText || latestSplitScenesText || latestStoryText || '').trim();
     return `[AUTO_SCENE_PHOTO_PROMPTS]
-Using the story/script and character prompts below, generate one still image prompt per scene in this EXACT format:
+Do NOT invent a new or different character face. Use ONLY the exact characters already defined in the Character Reference Sheet below, keeping their exact face, hair, age, and clothing consistent while changing their pose, body action, facial expression, camera framing, and scene background for each scene.
+
+Write in this EXACT format:
 
 फोटो 1 (सीन 1 - [Short Hindi Title])
-Prompt: [Detailed 100% English image generation prompt keeping the exact same character appearance, outfit, pose, camera angle, environment, and lighting]
+Prompt: [Detailed 100% English 16:9 widescreen scene photo prompt using the exact character(s) from the reference sheet, placing them into the scene's exact background, pose, body action, matching expression, camera angle, and lighting, with zero character identity change]
 
 फोटो 2 (सीन 2 - [Short Hindi Title])
-Prompt: [Detailed 100% English image generation prompt]
+Prompt: [Detailed 100% English 16:9 widescreen scene photo prompt]
 
 Story / Script:
 ${sourceContext}
 
-Character Prompts:
+Character Reference Sheet:
 ${charRefPromptsText || ''}`;
 }
 
 function buildDynamicSceneVideoPrompts(sceneSplitText, charRefPromptsText, scenePhotoPromptsText) {
     const sourceContext = (sceneSplitText || latestSplitScenesText || latestStoryText || '').trim();
     return `[AUTO_SCENE_VIDEO_PROMPTS]
-Using the story/script, character prompts, and scene photo prompts below, generate one 10-second Image-to-Video prompt per scene continuing smoothly from that scene's photo with zero double faces, zero extra hands/fingers, and consistent outfit/background in this EXACT format:
+Using the story/script, locked character prompts, and scene photo prompts below, generate one 10-second Image-to-Video motion prompt per scene continuing directly from that scene's photo with clear camera movement (zoom-in, pan, tilt, or pull-back) and smooth natural character action, zero double faces, zero extra hands/fingers, and consistent age/outfit in this EXACT format:
 
 सीन 1 वीडियो प्रॉम्प्ट
-Prompt: [Detailed 100% English 10-second video motion prompt describing smooth camera movement, natural character action and expression, consistent character design, no double faces or extra limbs]
+Prompt: [Detailed 10-second 100% English video motion prompt describing how the camera moves and how the character/scene animates smoothly from the photo for 10 seconds, consistent character design, single face, accurate hands]
 
 सीन 2 वीडियो प्रॉम्प्ट
-Prompt: [Detailed 100% English 10-second video motion prompt]
+Prompt: [Detailed 10-second 100% English video motion prompt]
 
 Story / Script:
 ${sourceContext}
@@ -795,8 +796,6 @@ async function executePromptTurn(overrideText = '', forcedPhase = null, displayO
     const isManualNormalChat = forcedPhase === 'normal_chat' && !isInternalAutoStep;
     const userRequestedPrompts = isManualNormalChat && isPromptRequestText(rawInput);
 
-    // सामान्य मैन्युअल बातचीत ('normal_chat') में ऑटो कहानी-चेन नहीं चलेगी;
-    // बाकी हर ट्रिगर (मास्टर सेटिंग टाइमर, postMessage, या स्क्रिप्ट क्लिक) में पूरी चेन चलेगी
     let phaseWhenSent = forcedPhase || 'story_generation';
     if (userRequestedPrompts) {
         phaseWhenSent = 'character_ref_prompt';
@@ -870,7 +869,7 @@ async function executePromptTurn(overrideText = '', forcedPhase = null, displayO
         ? `You are AGC.AI Core. ${GEMINI_STYLE_MASTER_RULES}\nWrite EVERY prompt strictly in clean, detailed ENGLISH without "None" or "N/A".`
         : phaseWhenSent === 'normal_chat'
             ? "You are AGC.AI Core, a helpful AI assistant. Reply naturally and concisely in HINDI (or the user's language)."
-            : `You are AGC.AI Core, an expert YouTube scriptwriter. ${GEMINI_STYLE_MASTER_RULES}\nWrite complete, detailed, and engaging scripts with character dialogues in HINDI.`;
+            : `You are AGC.AI Core, a master visual story architect. ${GEMINI_STYLE_MASTER_RULES}\nWrite a COMPLETE, NO-JUMP, STEP-BY-STEP VISUAL STORY in HINDI with zero speaker/narrator labels, zero question marks, and every transition connected smoothly from start to finish.`;
 
     const modelsToTry = ['gpt-3.5-turbo', 'gpt-4o-mini'];
     let finalResponse = null;
@@ -951,18 +950,19 @@ async function executePromptTurn(overrideText = '', forcedPhase = null, displayO
         const isCharRefToggleON = localStorage.getItem(CHAR_REF_TOGGLE_KEY) === 'true';
 
         if (phaseWhenSent === 'story_generation' && isSplitterON) {
-            const splitPrompt = `[AUTO_SCENE_SPLITTER]: नीचे दी गई स्क्रिप्ट को Scene 1, Scene 2, Scene 3... में अलग-अलग तोड़ें:
+            const splitPrompt = `[AUTO_SCENE_SPLITTER]: नीचे दी गई कहानी को बिना कोई बीच का दृश्य छोड़े या जंप मारे Scene 1, Scene 2, Scene 3... में क्रम से तोड़ें:
 
 ---
 ${finalResponse}
 ---
 
 नियम:
-- एक सीन में केवल एक ही सिंगल एक्शन हो।
+- कोई जंप न हो; चौंकने, चलने, मिलने, या वापस आने के बीच के हर कदम को क्रम में रखें।
+- "नरेटर:", "[सीक्वेंस...]" या प्रश्नवाचक वाक्य (?) न लिखें।
 - हर सीन के लिए स्पष्ट HINDI में दें:
-  1. Setting
-  2. Character Action & Attire
-  3. Voiceover/Dialogue`;
+  1. Exact Location & Camera Action
+  2. Character Appearance, Action & Attire (हर सीन में एक जैसा हुलिया)
+  3. Story/Dialogue Line (बिना प्रश्नवाचक अंदाज़ के)`;
 
             setTimeout(() => {
                 executePromptTurn(splitPrompt, 'scene_splitting');
@@ -1025,8 +1025,6 @@ ${finalResponse}
 }
 
 if (sendChatBtn && chatInput && chatMessages) {
-    // e.isTrusted === true का मतलब असली इंसान ने खुद क्लिक/Enter दबाया है -> 'normal_chat' (कोई ऑटो चेन नहीं)
-    // e.isTrusted === false का मतलब मास्टर सेटिंग/टाइमर स्क्रिप्ट ने प्रोग्राम से बटन दबाया है -> 'story_generation' (पूरी चेन चलेगी)
     sendChatBtn.addEventListener('click', (e) => {
         const phase = e && e.isTrusted === false ? 'story_generation' : 'normal_chat';
         executePromptTurn('', phase);
@@ -1059,8 +1057,8 @@ window.addEventListener('click', (e) => {
 function startScheduledStoryPipeline(incomingPrompt = '', modeTag = 'scheduled') {
     const promptToRun = (incomingPrompt || '').trim() || (
         modeTag === 'short'
-            ? 'एक मजेदार और भावनात्मक 1 मिनट की कहानी लिखें।'
-            : 'एक दमदार और रोचक कहानी लिखें।'
+            ? 'एक मजेदार और भावनात्मक 1 मिनट की बिना जंप वाली, पूरी तरह जुड़ी हुई विज़ुअल कहानी लिखें। कोई सवालिया वाक्य, नरेटर टैग या बीच के दृश्य का जंप न हो।'
+            : 'एक दमदार और रोचक बिना जंप वाली, पूरी तरह जुड़ी हुई विज़ुअल कहानी लिखें। कोई सवालिया वाक्य, नरेटर टैग या बीच के दृश्य का जंप न हो।'
     );
 
     activeSessionId = 'session_' + Date.now();

@@ -542,7 +542,7 @@ function formatPromptForRender(promptText, kind) {
     }
 
     if (kind === 'scene_photo') {
-        return `${clean} Widescreen 16:9 YouTube scene frame, ${qualityBoost}.`;
+        return `${clean} Widescreen 16:9 YouTube scene frame using the exact locked character appearance from reference while updating pose, action, and background, ${qualityBoost}.`;
     }
 
     return `${clean} ${qualityBoost}.`;
@@ -607,7 +607,7 @@ async function callGpuRenderEndpoint(promptText, kind, refImageUrl = '', allRefU
 
     const attempts = [
         { model: primaryModel, size: primarySize },
-        { model: primaryModel, size: '1024x1024' },
+        { model: primaryModel, size: '1344x768' },
         { model: DEFAULT_AICREDITS_IMAGE_MODEL, size: '1024x1024' }
     ];
 
@@ -854,7 +854,7 @@ function createStudioRow(item, kind, onUpdate) {
                 img.className = 'output-image';
                 img.src = item.imageUrl;
                 img.alt = item.label || 'Reference Photo';
-                img.style.cssText = 'display:block;width:100%;max-height:260px;object-fit:contain;border-radius:8px;';
+                img.style.cssText = 'display:block;width:100%;aspect-ratio:16/9;max-height:260px;object-fit:contain;border-radius:8px;';
                 attachPressAndHoldZoom(img, () => item.imageUrl, () => item.label || 'Reference Photo');
                 frame.appendChild(img);
             }
